@@ -1,0 +1,27 @@
+---
+abstract: 'A simple application layer to divide and integrate data and processes in the Perl program.'
+author:
+  - 'lottz <lottzaddr@gmail.com>'
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3613'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Su
+provides:
+  Su:
+    file: lib/Su.pm
+    version: 0.008
+  Su::Log:
+    file: lib/Su/Log.pm
+  Su::Model:
+    file: lib/Su/Model.pm
+  Su::Process:
+    file: lib/Su/Process.pm
+  Su::Template:
+    file: lib/Su/Template.pm
+resources:
+  license: http://dev.perl.org/licenses/
+version: 0.008

@@ -1,0 +1,96 @@
+0.008
+Date:   Wed Feb 2 22:53:00 2011 +0900
+    Modify pod comment.
+Date:   2011-01-10 16:08:00 +0900
+    Modify pod comments.
+Date:   2011-01-08 21:05:44 +0900
+    Add the fakeuninstall command to the CustomBuild.pm.
+Date:   2010-12-31 22:52:08 +0900
+    Add uninstall command to the build script and remove CheckModuleMethod.pm from the distribution.
+    
+    Featues
+      - Add uninstall method to CustomBuild.pm.
+    
+    Changes
+      - Remove CheckModuleMethod.pm from dist files.
+Date:   2010-12-26 21:13:02 +0900
+    Fixed the template bug and add error message.
+    
+    Bug Fixes
+      - Fixed the <%== %> expansion in template not to escape special caractors.
+    
+    Changes
+      - Add the error message when user tring to apply scalar filters to the multiple result of the process.
+Date:   2010-11-25 22:47:20 +0900
+    Add some pod comment and rename internal method to make it has the prefix '_'.
+Date:   2010-11-24 22:13:26 +0900
+    Add the variable $Su::Process::SUPPRESS_LOAD_ERROR for suppress module loading error.
+    
+    Features
+      - Add the variable $Su::Process::SUPPRESS_LOAD_ERROR for suppress the error when
+        loading a process module.
+      - Add the method 'Su::Model->attr' for store variables in application scope.
+    
+    Changes
+      Make throw the error if loading process is not exist or failded to require.
+Date:   2010-11-24 21:53:32 +0900
+    Add some pod comment.
+
+0.007
+Date:   Sat Nov 20 22:41:37 2010 +0900
+    Suppress warnings when empty variable is passed to the <%= %> expression.
+
+0.006
+Date:   2010-11-20 17:25:58 +0900
+    Fixed the bug to use the model field of it's instance when injecting model deta to the Process.
+    
+    Bug fixes
+      Change the template for generating Process to use $self instance if $self is passed when the model accessor is called.
+    
+    Changes
+      Load Model class using 'new' method if thet Model has 'new' method.
+    
+    Misc
+      Add some tests to test filters.
+Date:   2010-11-20 00:05:27 +0900
+    Change the method name 'Su::Process::_has_suffix' and add POD document.
+    
+    Features
+      Add the feature to CustomBuild.pm to check whether the empty line is exist before a source code block in the pod document.
+    
+    Changes
+      Change the method name 'Su::Process::has_suffix' to 'Su::Process::_has_suffix'.
+    
+    Docs
+      Add the POD document.
+Date:   2010-11-15 23:15:46 +0900
+    Change .gitattributes.
+Date:   2010-11-15 23:09:01 +0900
+    Change .gitattributes.
+Date:   2010-11-15 22:54:27 +0900
+    Change .gitattributes.
+Date:   2010-11-14 17:29:59 +0900
+    Add .gitattribute file.
+
+0.005
+Date:   2010-11-14 08:54:51 +0900
+    Add the pod document.
+Date:   2010-11-13 17:14:56 +0900
+    Add and fixed the misspelling of the pod.
+
+0.004
+Date:   2010-11-11 23:09:16 +0900
+    Fixed the regex in the MANIFEST.SKIP.
+
+0.003
+Date:   2010-11-11 23:04:35 +0900
+    Add missing test script to MANIFEST and correct the regex in MANIFEST.SKIP.
+
+0.002
+Date:   2010-11-11 22:31:59 +0900
+    Fixed the CustomBuild::add_changes if the tag is not set.
+
+0.001
+Date:   2010-11-11 21:57:22 +0900
+    Init Project.
+
