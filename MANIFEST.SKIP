@@ -61,3 +61,10 @@ pod2htmi.tmp
 lib/Su/Procs/CheckModuleMethod\.pm
 lib/Su/Procs/.*
 perl.exe.stackdump
+bash.exe.stackdump
+
+
+develMemo.html
+develMemo.md
+
+

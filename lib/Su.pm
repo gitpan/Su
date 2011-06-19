@@ -15,7 +15,7 @@ use Su::Log;
 
 use Fatal qw(mkpath);
 
-our $VERSION = '0.008';
+our $VERSION = '0.011';
 
 our @ISA = qw(Exporter);
 

@@ -1,6 +1,6 @@
 use lib qw(t/test15 test15 lib ../lib);
 use Su::Log;
-use Test::More tests => 15;
+use Test::More tests => 19;
 use ForTest;
 
 Su::Log->on('ForTest');
@@ -12,9 +12,11 @@ is( $ret, "[INFO]info message.\n" );
 $ret = $obj->trace_test();
 ok( !$ret );
 
-Su::Log->set_level("trace");
+# Su::Log->set_level("trace");
+Su::Log->set_global_log_level("trace");
 $ret = $obj->trace_test();
 is( $ret, "[TRACE]trace message.\n" );
+Su::Log->set_global_log_level(undef);
 
 package Test15_Foo;
 use Test::More;
@@ -26,8 +28,20 @@ sub new {
 
 sub fn01 {
   my $log = Su::Log->new(shift);
+  my $arg = shift;
+
+  # if ($arg) {
+  #   diag( "on?:" . $log->{on} );
+  # }
   $log->info("info from Test15_Foo::fn01()");
-}
+} ## end sub fn01
+
+sub fn01_off {
+  my $self = shift;
+  my $log  = Su::Log->new($self);
+  $log->off;
+  $log->info("info from Test15_Foo::fn01_off()");
+} ## end sub fn01_off
 
 sub fn02 {
   my $log = Su::Log->new(shift);
@@ -48,15 +62,20 @@ package main;
 $obj = Test15_Foo->new;
 
 $ret = undef;
-$ret = $obj->fn01;
+$ret = $obj->fn01('arg');
 
 #diag( "ret is:" . $ret );
 #diag(@Su::Log::target_class);
+is( $ret, "[INFO]info from Test15_Foo::fn01()\n" );
 
+$ret = undef;
+$ret = $obj->fn01_off;
+
+# diag($ret);
 ok( !$ret, "Nothing logged because module is not registered." );
 
 # Set the whole class as log target.
-Su::Log->on;
+Su::Log->enable;
 $ret = $obj->fn01;
 
 is(
@@ -73,10 +92,12 @@ is( $ret, "custom log handler:[INFO]info from Test15_Foo::fn02()" );
 # test for functional usage.
 
 # Omit constructor parmeter test.
-Su::Log->clear_all_flag;
-$log = new Su::Log->new;
+Su::Log->clear_all_flags;
+$Su::Log::all_off = 1;
+$log              = new Su::Log->new;
 
-ok( !$log->info("info message") );
+ok( !$log->info("info message"), "Test of the all_off flag." );
+Su::Log->clear_all_flags;
 
 # Register main package.
 Su::Log->on(__PACKAGE__);
@@ -90,15 +111,33 @@ ok( !$log->info("info message") );
 ok( !$log->warn("info message") );
 ok( !$log->crit("info message") );
 
-## Use logger with function style.
-
-$Su::Log::class_name = __PACKAGE__;
-ok( !Su::Log::info("info message") );
-
 Su::Log->on(__PACKAGE__);
-is( Su::Log::info("info message2"), "[INFO]info message2\n" );
 
-# Indeed, class_name is not required to determine caller package name.
-$Su::Log::class_name = undef;
-is( Su::Log::info("info message3"), "[INFO]info message3\n" );
+my $log = Su::Log->new;
+ok( $log->info("info message") );
+
+# Su::Log->on(__PACKAGE__);
+is( $log->info("info message2"), "[INFO]info message2\n" );
+
+# Test to use the class specified off flag.
+Su::Log->clear_all_flags;
+Su::Log->clear;
+$obj = Test15_Foo->new;
+
+$ret = undef;
+$ret = $obj->fn01;
+ok($ret);
+
+Su::Log->off('Test15_Foo');
+$ret = $obj->fn01;
+ok( !$ret );
+
+Su::Log->on('Test15_Foo');
+$ret = $obj->fn01;
+ok($ret);
+
+# Test to force enable logging from outer against inner using of off method.
+
+$ret = $obj->fn01_off;
+ok( $ret, "Force output test." );
 

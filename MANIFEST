@@ -1,5 +1,4 @@
 Build.PL
-CustomBuild.pm
 lib/Su.pm
 lib/Su/Log.pm
 lib/Su/Model.pm
@@ -86,6 +85,9 @@ t/test16/Templates/ReturnArrayProc.pm
 Makefile.PL
 
 
+t/150_log.t
+t/test15/Procs/ForLogTest.pm
+t/test15/Procs/ForLogTest2.pm
 
-
+lib/Su/Build/CustomBuild.pm
 

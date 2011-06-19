@@ -1,5 +1,5 @@
-#!usr/bin/perl
-package CustomBuild;
+#!/usr/bin/perl
+package Su::Build::CustomBuild;
 
 use strict;
 use warnings;
@@ -38,8 +38,9 @@ sub ACTION_list {
 
   print "Action entries:\n";
   my $pkg_name = __PACKAGE__;
-  $pkg_name =~ s/::/\//;
-  open( my $f, "<", $pkg_name . ".pm" );
+
+  $pkg_name =~ s/::/\//g;
+  open( my $f, "<", 'lib/' . $pkg_name . ".pm" );
   for (<$f>) {
     if ( $_ =~ /sub ACTION_([a-zA-Z0-9_]+?)\s*{/ ) {
       print $1 . "\n";
@@ -179,7 +180,7 @@ sub resume {
   # Register the test hander.
   foreach my $key ( sort keys %{$tests} ) {
 
-    *{"CustomBuild::ACTION_test${key}"} = sub {
+    *{ __PACKAGE__ . "::ACTION_test${key}" } = sub {
       shift->generic_test( type => "${key}" );
     };
   } ## end foreach my $key ( sort keys...)
@@ -190,7 +191,7 @@ sub resume {
     my $kind = $ship_file;
     $kind =~ s/\.shipit_(.+)/$1/;
 
-    *{"CustomBuild::ACTION_shipit_${kind}"} = sub {
+    *{ __PACKAGE__ . "::ACTION_shipit_${kind}" } = sub {
 
       my $SHIP_CONF_FILE = $ship_file;
       print "ship file:" . $SHIP_CONF_FILE . "\n";
@@ -360,6 +361,85 @@ sub ACTION_fakeuninstall {
   print join( '', <$F> );
 
 } ## end sub ACTION_fakeuninstall
+
+sub ACTION_ms_test {
+  my $self = shift;
+
+  # The temporaly directory to extract tar.gz file for test.
+  my $work_dir = 'c:/tmp';
+
+  # my $win_perl = 'c:/perl/bin/perl.exe';
+
+  # Make the path of perl executable file from the PATH entry.
+  my $win_perl =
+`set|grep -e ^PATH=|perl -ne 'print join("\n",split ":" ,\$_);'|grep -i perl/bin|perl -ne '\$_=~s!/cygdrive/([a-z])(.*)!\$1:\$2/perl.exe!;print \$_;'`;
+  chomp $win_perl;
+  print "ms perl path:" . $win_perl;
+  die "perl.exe not exist: $win_perl:" unless ( -f $win_perl );
+
+# `set|grep -e ^PATH=|perl -ne 'print join("\n",split ":" ,$_);'|grep -i perl/bin|perl -ne '$_=~s!/cygdrive/([a-z])(.*)!$1:$2/perl.exe!;print $_;'`;
+
+  import Data::Dumper;
+  import File::Spec;
+  print Dumper( $self->{properties}->{module_name} );
+  my $fname = $self->{properties}->{module_name};
+  $fname =~ s/::/-/;
+
+  my @f = glob("Su-*\.tar\.gz");
+  unless (@f) {
+    die "dist file not exist.";
+  }
+  print "target file:" . $f[0] . "\n";
+
+  # Remove old work file.
+  my $work_file = File::Spec->catfile( $work_dir, $f[0] );
+  if ( -f $work_file ) {
+    `rm $work_file`;
+  }
+
+  # Copy to the work dir.
+  `cp $f[0] $work_dir`;
+
+  die "target file not exist: $f[0]:" unless ( -f $f[0] );
+
+  my $file_mod_ts = ( stat $f[0] )[9];
+  my $file_cur_ts = time;
+  print "[TRACE]file_mod_ts:$file_mod_ts\n";
+  print "[TRACE]file_cur_ts:$file_cur_ts\n";
+
+  die "target file is too old which is build over 30 min before."
+    if $file_mod_ts < $file_cur_ts - 60 * 30;
+
+  my $dir_name = $f[0];
+  $dir_name =~ s/(Su-[0-9.]+)\.tar\.gz/$1/;
+  print "dir_name:" . $dir_name . "\n";
+  my $uncompress_dir = File::Spec->catfile( $work_dir, $dir_name );
+
+  # Remove old work uncompressed dir.
+  if ( -d $uncompress_dir ) {
+    `rm -fr $uncompress_dir`;
+  }
+
+  unless ( -f $work_file ) {
+    die "work file not exist.";
+  }
+  my $cyg_work_file = $work_file;
+  my $cyg_work_dir  = $work_dir;
+  $cyg_work_file =~ s/://;
+  $cyg_work_dir  =~ s/://;
+  print "file:" . $cyg_work_file . "\n";
+  `tar -C /cygdrive/$cyg_work_dir -xvzf /cygdrive/$cyg_work_file`;
+
+  $uncompress_dir =~ s/://;
+  print "changing directory:" . $uncompress_dir . "\n";
+  print `cd /cygdrive/$uncompress_dir;$win_perl Build.PL`;
+  print `cd /cygdrive/$uncompress_dir;$win_perl Build test`;
+
+  # perl -e ' print `cd c:/tmp/Su-0.008;c:/perl/bin/perl.exe Build.PL`'
+  # perl -e ' print `cd c:/tmp/Su-0.008;c:/perl/bin/perl.exe Build help`'
+  # perl -e ' print `cd c:/tmp/Su-0.008;c:/perl/bin/perl.exe Build test`'
+
+} ## end sub ACTION_ms_test
 
 1;
 

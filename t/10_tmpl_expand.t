@@ -1,4 +1,4 @@
-use Test::More tests => 21;
+use Test::More tests => 25;
 
 use lib qw( ../lib);
 use Su::Template;
@@ -158,4 +158,34 @@ $ret = $t->expand(<<'__HERE__');
 __HERE__
 ##
 is( $ret, "<>\n" );
+
+$ret = $t->expand(<<'__HERE__');
+&
+__HERE__
+
+is(
+  $ret, "&
+"
+);
+
+$ret = $t->expand(<<'__HERE__');
+% my $val = "&";
+<%=$val~%>
+__HERE__
+
+is( $ret, "&amp;" );
+
+$ret = $t->expand(<<'__HERE__');
+% my $val = "&amp;";
+<%=$val~%>
+__HERE__
+
+is( $ret, "&amp;" );
+
+$ret = $t->expand(<<'__HERE__');
+% my $val = "&gt;aaa&bbb&lt;";
+<%=$val~%>
+__HERE__
+
+is( $ret, "&gt;aaa&amp;bbb&lt;" );
 

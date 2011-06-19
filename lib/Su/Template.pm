@@ -239,8 +239,13 @@ sub expand {
 
             # Escape and push.
             push @ret, '$tmp_val = ' . '(' . $exp . ');';
-            push @ret,
-              'if($tmp_val){$tmp_val=~s/(<|>|\'|"|&)/$escape_h{$1}/go;';
+
+# If the special charactor is already escaped using '&', then prevent unexpected double escaped.
+            push @ret, 'if($tmp_val){
+                            $tmp_val=~s/&(?!(lt|gt|amp|quot|apos);)/&amp;/go;
+                            $tmp_val=~s/(<|>|\'|")/$escape_h{$1}/go;';
+
+            # $tmp_val=~s/(<|>|\'|"|&)/$escape_h{$1}/go;';
             push @ret, ( 'push(@f_t_a, $tmp_val' . ');}' );
           } else {
 

@@ -2,11 +2,10 @@
 
 use strict;
 use warnings;
-
-use CustomBuild;
 use lib qw(lib);
+use Su::Build::CustomBuild;
 
-my $builder = CustomBuild->new(
+my $builder = Su::Build::CustomBuild->new(
   module_name => 'Su',
   license     => 'perl',
   dist_author => 'lottz <lottzaddr@gmail.com>',
@@ -36,7 +35,7 @@ my $builder = CustomBuild->new(
   test_types => {
 
     # ./Build testdoc
-    testdoc => ['.td'],
+    doc => ['.td'],
 
     # ./Build testtd
     td => ['.td'],

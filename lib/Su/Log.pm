@@ -7,18 +7,39 @@ use Data::Dumper;
 
 =head1 NAME
 
-Su::Log - A Simple Logger that has the feature of recognizing log
-level and narrowing down the logging target class.
+Su::Log - A simple Logger which filters output by log level and regexp of the target class name.
 
 =head1 SYNOPSYS
 
-  Su::Log->on('Target::Module::Name');
-  Su::Log->set_level("trace");
   my $log = Su::Log->new;
-  $log->info("info message");
+  $log->info("info message.");
 
-  Su::Log->on(__PACKAGE__);
-  Su::Log::info("info message");
+  # Set the log level to output.
+  Su::Log->set_level("trace");
+  $log->trace("trace message.");
+
+  # Disable logging and nothing output.
+  $log->off(__PACKAGE__);
+  $log->info("info message.");
+
+  # Clear the logging state.
+  $log->clear(__PACKAGE__);
+
+  # Enable logging.
+  $log->on(__PACKAGE__);
+  $log->info("info message.");
+
+  # Clear the logging state.
+  $log->clear(__PACKAGE__);
+
+  # Set the logging target and log level.
+  $log->on( 'Pkg::LogTarget', 'error' );
+
+  # Set the logging target by regex.
+  $log->on( qr/Pkg::.*/, 'error' );
+
+  # Clear the logging state.
+  $log->clear(qr/Pkg::.*/);
 
 =head1 DESCRIPTION
 
@@ -43,12 +64,21 @@ Su::Log has the following features.
 
 =cut
 
+# Each elements consist of { class => $class, level => $level }
 our @target_class = ();
 our @target_tag   = ();
-our $level        = "info";
 
-# If you use want to use this Log class not via log oblect, but log
-# function directly, set current class name to this variable.
+# Default log level.
+our $level = "info";
+
+# User specified global log level.
+our $global_log_level;
+
+# Elements are String or Regexp of the target class.
+our @exclusion_class = ();
+
+# If you want to use this Log class not as oblect oriented style, but
+# as function style directly, set current class name to this variable.
 our $class_name;
 
 our $all_on  = 0;
@@ -64,6 +94,7 @@ BEGIN: {
 } ## end BEGIN:
 
 my $level_hash = {
+  debug => 0,
   trace => 1,
   info  => 2,
   warn  => 3,
@@ -80,49 +111,162 @@ target.
 =cut
 
 # NOTE: @target_class is a package variable, so shared with other
-# logger user even if you call this method via the specific logger
+# logger even if you call this method via the specific logger
 # instance.
 sub on {
-  shift if ( $_[0] eq __PACKAGE__ || ref $_[0] eq __PACKAGE__ );
+  my $self  = shift if ( $_[0] eq __PACKAGE__ || ref $_[0] eq __PACKAGE__ );
   my $class = shift;
+  my $level = shift;
+
   if ($class) {
-    push @target_class, $class;
+
+    #  diag( "on|" . $class . "|" . $level );
+
+    # Remove old entry before adding new one.
+    if ( grep { $_->{class} =~ /^$class$/ } @target_class ) {
+
+      # @target_class = grep { $_->{class} ne /^$class$/ } @target_class;
+      @target_class = grep { $_->{class} !~ /^$class$/ } @target_class;
+    }
+
+    push @target_class, { class => $class, level => $level };
+
+    my $bRegex = ref $class eq 'Regexp';
+    if ($bRegex) {
+      @exclusion_class = grep { $_ ne $class } @exclusion_class;
+    } else {
+      @exclusion_class = grep !/^$class$/, @exclusion_class;
+    }
+
   } else {
-    $all_on  = 1;
-    $all_off = 0;
+    $self->{on} = 1;
   }
 } ## end sub on
 
+=item enable()
+
+This method force enable the logging regardless of whether the logging
+of the target class is enabled or disabled.
+
+Internally, this method set the $all_on flag on, and $all_off flag
+off. To clear this state, call the method L<Su::clear_all_flags>.
+
+=cut
+
+sub enable {
+  $all_on  = 1;
+  $all_off = 0;
+}
+
 =item off()
 
-Remove the passed module name from the list of the logging tareget.
+Disable the logging of the class which name is passed as a parameter.
+
+ $log->off('Target::Class');
+
+If the parameter is omitted, this effects only own instance.
+
+ $log->off;
 
 =cut
 
 sub off {
-  shift if ( $_[0] eq __PACKAGE__ || ref $_[0] eq __PACKAGE__ );
+  my $self = shift if ( $_[0] eq __PACKAGE__ || ref $_[0] eq __PACKAGE__ );
   my $class = shift;
 
+  # In case of specified the log target.
   if ($class) {
 
-    # Remove passed class name from log target classes.
-    @target_class = grep !/^$class$/, @target_class;
-  } else {
-    $all_off = 1;
-    $all_on  = 0;
-  }
+    # String parameter.
+    if ( !ref $class ) {
+      unless ( grep /^$class$/, @exclusion_class ) {
+        push @exclusion_class, $class;
+      }
+
+      # Remove the passed class name from log target classes.
+      @target_class = grep { $_->{class} !~ /^$class$/ } @target_class;
+    } ## end if ( !ref $class )
+    elsif ( ref $class eq 'Regexp' ) {
+
+      unless ( grep { $_ eq $class } @exclusion_class ) {
+        push @exclusion_class, $class;
+      }
+
+      # Remove the passed regex from the log tareget classes.
+      @target_class = grep { $class ne $_->{class} } @target_class;
+    } ## end elsif ( ref $class eq 'Regexp')
+  } ## end if ($class)
+  else {
+
+    # diag("off the logging of this instance.");
+
+    # Instance parameter effects only own instance.
+    $self->{on} = undef;
+  } ## end else [ if ($class) ]
 } ## end sub off
 
-=item clear_all_flag()
+=item disable()
 
-Clear C<$all_on> and C<$all_off> flags.
+This method force disable the logging regardless of whether the logging
+of the target class is enabled or disabled.
+
+Internally, ths method set the $all_off flag on, and $all_on flag off.
+To clear this state, call the method L<Su::clear_all_flags>.
 
 =cut
 
-sub clear_all_flag {
+sub disable {
+
+  $all_off = 1;
+  $all_on  = 0;
+
+} ## end sub disable
+
+=item clear_all_flags()
+
+Clear C<$all_on> and C<$all_off> flags that is set by L<Su::enable>
+or L<Su::disable> method.
+
+=cut
+
+sub clear_all_flags {
   $all_on  = 0;
   $all_off = 0;
 }
+
+=item clear()
+
+If the parameter is passed, This method clear the state of the passed
+target that is set by the method L<on> and L<off>.
+
+If the parameter is omitted, then clear all of the log settings.
+
+=cut
+
+sub clear {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  my $class = shift;
+
+  # Remove the specified expression.
+  if ($class) {
+    my $bRegex = ref $class eq 'Regexp';
+    if ($bRegex) {
+      @target_class    = grep { $class ne $_->{class} } @target_class;
+      @exclusion_class = grep { $_     ne $class } @exclusion_class;
+    } else {
+      @target_class = grep { $_->{class} !~ /^$class$/ } @target_class;
+      @exclusion_class = grep !/^$class$/, @exclusion_class;
+    }
+
+  } else {
+
+    # Clear all condition.
+    @target_class    = ();
+    @target_tag      = ();
+    @exclusion_class = ();
+    clear_all_flags();
+  } ## end else [ if ($class) ]
+} ## end sub clear
 
 =item tag_on()
 
@@ -184,7 +328,9 @@ sub new {
   # Su::Log->trace( "classname:" . $class_name );
   # Su::Log->trace( Dumper($class_name) );
 
-  return bless { class_name => $class_name }, $self;
+  # Add the caller class to the target list automatically.
+
+  return bless { class_name => $class_name, on => 1, level => $level }, $self;
 } ## end sub new
 
 =item is_target()
@@ -197,9 +343,11 @@ sub is_target {
   my $self = shift;
 
   if ($all_on) {
-    return 1;
+
+    return { is_target => 1, has_level => undef };
   } elsif ($all_off) {
-    return 0;
+
+    return { is_target => 0, has_level => undef };
   }
 
   my $self_class_name = $self;
@@ -217,46 +365,135 @@ sub is_target {
 
   # diag("grep result:" . (grep /^$self->{class_name}$/, @target_class));
   #  if (index($self->{class_name}, @target_class) != -1){
-  if ( ( grep /^$self_class_name$/, @target_class ) ) {
-    return 1;
-  } else {
+  # diag( "exc cls:" . Dumper(@exclusion_class) );
+  if (
+    grep {
+      ref $_ eq 'Regexp'
+        ? $self_class_name =~ /$_/
+        : $self_class_name =~ /^$_$/
+    } @exclusion_class
+    )
+  {
     return 0;
-  }
+  } elsif (
+    my @info =
+    grep {
+      my $bRegex = ref $_->{class} eq 'Regexp';
+      if ($bRegex) {
+
+        # diag('use regex');
+
+        # Use class field as regexp.
+        $self_class_name =~ /$_->{class}/;
+      } else {
+
+        # diag('use str');
+
+        # Use class field as string,directly.
+        $self_class_name =~ /^$_->{class}$/;
+      } ## end else [ if ($bRegex) ]
+    } @target_class
+    )
+  {
+
+    #    diag( Dumper(@target_class) );
+    #    diag("here2:$info[0]->{class} --- $info[0]->{level}");
+    return { is_target => 1, has_level => 1, level => $info[0]->{level} };
+  } else {
+
+    #    diag( "here3:" . $self . $self->{on} );
+
+    # Return the instance flag.
+    # return $self->{on};
+    return { is_target => $self->{on}, has_level => undef };
+  } ## end else [ if ($bRegex) ]
 } ## end sub is_target
 
 =item set_level()
 
 Su::Log->set_level("trace");
 
-Set the log level. This setting effects as the package scope variable.
+Set the log level which effects instance scope.
 
 =cut
 
 sub set_level {
 
   # The first argment may be reference of object or string of class name.
-  shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
   my $passed_level = shift;
   croak "Passed log level is invalid:" . $passed_level
     if !grep /^$passed_level$/, keys %{$level_hash};
-  $level = $passed_level;
+  $self->{level} = $passed_level;
+
 } ## end sub set_level
+
+=item set_global_log_level()
+
+Su::Log->set_default_log_level("trace");
+
+Set the log level. This setting effects as the package scope variable.
+
+To clear the $global_log_level flag, pass undef to this method.
+
+=cut
+
+sub set_global_log_level {
+
+  # The first argment may be reference of object or string of class name.
+  shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  my $passed_level = shift;
+  croak "Passed log level is invalid:" . $passed_level
+    if defined $passed_level && !grep /^$passed_level$/, keys %{$level_hash};
+  $global_log_level = $passed_level;
+} ## end sub set_global_log_level
 
 =item is_large_level()
 
 Return whether the passed log level is larger than the current log level or not.
+If the second parameter is passed, then compare that value as the current log level.
 
 =cut
 
 sub is_large_level {
-  shift if ( ref $_[0] eq __PACKAGE__ );
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  $self = caller() unless $self;
 
+  #  diag "dumper:" . Dumper( $self->{class_name} );
   my $arg = shift;
 
 #NOTE:Can not trace via trace command which Log class provides, because recursion occurs.
 #diag("compare:" . $arg . ":" . $level);
-  return $level_hash->{$arg} >= $level_hash->{$level} ? 1 : 0;
+
+  my $compare_target_level = shift;
+
+  # If the second parameter is passed, use it as compare target directly.
+  unless ($compare_target_level) {
+    if ( defined $global_log_level ) {
+      $compare_target_level = $global_log_level;
+    } elsif ( $self->{level} ) {
+      $compare_target_level = $self->{level};
+    } else {
+      $compare_target_level = $level;
+    }
+  } ## end unless ($compare_target_level)
+
+  #  diag "[TRACE]compare_target_level:$compare_target_level:arg:$arg\n";
+  return $level_hash->{$arg} >= $level_hash->{$compare_target_level} ? 1 : 0;
 } ## end sub is_large_level
+
+sub _log_method_impl {
+  my $self         = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $method_level = shift;
+  my $log_handler  = $self->{log_handler} ? $self->{log_handler} : $log_handler;
+  my $target_info  = is_target( _is_empty($self) ? caller() : $self );
+
+  if ( $target_info->{is_target}
+    && $self->is_large_level( $method_level, $target_info->{level} ) )
+  {
+    return $log_handler->( uc("[$method_level]"), @_ );
+  }
+} ## end sub _log_method_impl
 
 =item trace()
 
@@ -265,16 +502,10 @@ Log the passed message as trace level.
 =cut
 
 sub trace {
-  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
-  my $log_handler = $self->{log_handler} ? $self->{log_handler} : $log_handler;
-  if ( is_target( _is_empty($self) ? caller() : $self )
-    && is_large_level("trace") )
-  {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
 
-    #    if (is_target($self ? $self : caller()) && is_large_level("trace")){
-    return $log_handler->( "[TRACE]", @_ );
-  } ## end if ( is_target( _is_empty...))
-} ## end sub trace
+  $self->_log_method_impl( "trace", @_ );
+}
 
 =item info()
 
@@ -283,16 +514,9 @@ Log the passed message as info level.
 =cut
 
 sub info {
-  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
-  my $log_handler = $self->{log_handler} ? $self->{log_handler} : $log_handler;
-
-  #diag("info check:" . Dumper(is_empty($self) ? caller() : $self));
-  if ( is_target( _is_empty($self) ? caller() : $self )
-    && is_large_level("info") )
-  {
-    return $log_handler->( "[INFO]", @_ );
-  }
-} ## end sub info
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  $self->_log_method_impl( "info", @_ );
+}
 
 =item warn()
 
@@ -301,16 +525,9 @@ Log the passed message as warn level.
 =cut
 
 sub warn {
-  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
-  my $log_handler = $self->{log_handler} ? $self->{log_handler} : $log_handler;
-  if ( is_target( _is_empty($self) ? caller() : $self )
-    && is_large_level("warn") )
-  {
-
-    #  if (is_target($self ? $self : caller()) && is_large_level("warn")){
-    return $log_handler->( "[WARN]", @_ );
-  } ## end if ( is_target( _is_empty...))
-} ## end sub warn
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  $self->_log_method_impl( "warn", @_ );
+}
 
 =item error()
 
@@ -319,16 +536,9 @@ Log the passed message as error level.
 =cut
 
 sub error {
-  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
-  my $log_handler = $self->{log_handler} ? $self->{log_handler} : $log_handler;
-  if ( is_target( _is_empty($self) ? caller() : $self )
-    && is_large_level("error") )
-  {
-
-    #  if (is_target($self ? $self : caller()) && is_large_level("error")){
-    return $log_handler->( "[ERROR]", @_ );
-  } ## end if ( is_target( _is_empty...))
-} ## end sub error
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  $self->_log_method_impl( "error", @_ );
+}
 
 =item crit()
 
@@ -337,16 +547,20 @@ Log the passed message as crit level.
 =cut
 
 sub crit {
-  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
-  my $log_handler = $self->{log_handler} ? $self->{log_handler} : $log_handler;
-  if ( is_target( _is_empty($self) ? caller() : $self )
-    && is_large_level("crit") )
-  {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  $self->_log_method_impl( "crit", @_ );
+}
 
-    #  if (is_target($self ? $self : caller()) && is_large_level("crit")){
-    return $log_handler->( "[CRIT]", @_ );
-  } ## end if ( is_target( _is_empty...))
-} ## end sub crit
+=item debug()
+
+Log the passed message as debug level.
+
+=cut
+
+sub debug {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
+  $self->_log_method_impl( "debug", @_ );
+}
 
 =item log()
 

@@ -3,13 +3,26 @@ use Su;
 use Data::Dumper;
 use Test::More tests => 11;
 
+sub convert_sep {
+  my $cmd = shift;
+  if ( $^O eq 'MSWin32' ) {
+    $cmd =~ s/\"/\\\"/g;
+    $cmd =~ s/'/\"/g;
+  }
+  $cmd;
+} ## end sub convert_sep
+
 if ( -f "./t/test18/Pkg/TestProc.pm" ) {
   unlink "./t/test18/Pkg/TestProc.pm" or die $!;
 }
 
 # Set base form Su::Template package.
-`perl -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc("Pkg::TestProc")'`;
+my $cmd =
+"perl -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc(\"Pkg::TestProc\")'";
+$cmd = convert_sep($cmd);
 
+#diag($cmd);
+`$cmd`;
 ok( -f "./t/test18/Pkg/TestProc.pm" );
 
 my $suproc = Su::Process->new;
@@ -21,7 +34,10 @@ if ( -f "./t/test18/SuPkg/TestProc.pm" ) {
 }
 
 # Set base form Su package.
-`perl -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc("SuPkg::TestProc")'`;
+$cmd =
+"perl -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc(\"SuPkg::TestProc\")'";
+$cmd = convert_sep($cmd);
+`$cmd`;
 
 ok( -f "./t/test18/SuPkg/TestProc.pm" );
 
@@ -31,8 +47,10 @@ if ( -f "./t/test18/SuModelPkg/TestModel.pm" ) {
   unlink "./t/test18/SuModelPkg/TestModel.pm" or die $!;
 }
 
-`perl -MSu::Model=base,./t/test18/ -e 'Su::Model::generate_model("SuModelPkg::TestModel")'`;
-
+$cmd =
+"perl -MSu::Model=base,./t/test18/ -e 'Su::Model::generate_model(\"SuModelPkg::TestModel\")'";
+$cmd = convert_sep($cmd);
+`$cmd`;
 ok( -f "./t/test18/SuModelPkg/TestModel.pm" );
 
 my $su_model = Su::Model->new;
@@ -44,16 +62,18 @@ if ( -f "./t/test18/Defs/Defs.pm" ) {
   unlink "./t/test18/Defs/Defs.pm" or die $!;
 }
 
-`perl -MSu=base,./t/test18/ -e 'Su::gen_defs()'`;
-
+$cmd = "perl -MSu=base,./t/test18/ -e 'Su::gen_defs()'";
+$cmd = convert_sep($cmd);
+`$cmd`;
 ok( -f "./t/test18/Defs/Defs.pm" );
 
 if ( -f "./t/test18/MyDefs/MyDefs.pm" ) {
   unlink "./t/test18/MyDefs/MyDefs.pm" or die $!;
 }
 
-`perl -MSu=base,./t/test18/ -e 'Su::gen_defs("MyDefs::MyDefs")'`;
-
+$cmd = "perl -MSu=base,./t/test18/ -e 'Su::gen_defs(\"MyDefs::MyDefs\")'";
+$cmd = convert_sep($cmd);
+`$cmd`;
 ok( -f "./t/test18/MyDefs/MyDefs.pm" );
 
 my $su = Su->new( base => 't/test18', defs_module => 'MyDefs::MyDefs' );
@@ -76,8 +96,9 @@ if ( -f "./t/test18/Pkg/TestProcFromSu.pm" ) {
 }
 
 # Set base form Su package.
-`perl -MSu=base,./t/test18/ -e 'Su::gen_proc("Pkg::TestProcFromSu")'`;
-
+$cmd = "perl -MSu=base,./t/test18/ -e 'Su::gen_proc(\"Pkg::TestProcFromSu\")'";
+$cmd = convert_sep($cmd);
+`$cmd`;
 ok( -f "./t/test18/Pkg/TestProcFromSu.pm" );
 
 if ( -f "./t/test18/Pkg/TestModelFromSu.pm" ) {
@@ -85,6 +106,8 @@ if ( -f "./t/test18/Pkg/TestModelFromSu.pm" ) {
 }
 
 # Set base form Su package.
-`perl -MSu=base,./t/test18/ -e 'Su::gen_model("Pkg::TestModelFromSu")'`;
-
+$cmd =
+  "perl -MSu=base,./t/test18/ -e 'Su::gen_model(\"Pkg::TestModelFromSu\")'";
+$cmd = convert_sep($cmd);
+`$cmd`;
 ok( -f "./t/test18/Pkg/TestModelFromSu.pm" );
