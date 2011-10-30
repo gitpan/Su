@@ -33,6 +33,7 @@ Su::setup(
   menuWithArg =>
     { proc => 'Templates::MenuTmplWithArg', model => 'Models::MenuModel' },
 );
+$Su::USE_GLOBAL_SETUP = 1;
 
 my $fgen = Su->new;
 

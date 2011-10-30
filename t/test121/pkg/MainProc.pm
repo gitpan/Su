@@ -1,63 +1,59 @@
-package Pkg::TestProc;
+package pkg::MainProc;
 use strict;
 use warnings;
 use Su::Template;
 
-my $model={};
+my $model = {};
 
-sub new {
-  return bless { model => $model }, shift;
-}
+# sub new {
+#   return bless { model => $model }, shift;
+# }
 
 # The main method for this process class.
-sub process{
-  my $self = shift if ref $_[0] eq __PACKAGE__;
+sub process {
+  my $self             = shift if ref $_[0] eq __PACKAGE__;
+  my $self_module_name = shift if $_[0]     eq __PACKAGE__;
   my $model = keys %{ $self->{model} } ? $self->{model} : $model;
 
   my $param = shift;
-#$Su::Template::DEBUG=1;
-  my $ret = expand(<<'__TMPL__');
-
-__TMPL__
-#$Su::Template::DEBUG=0;
-  return $ret;
-}
+  return $model->{$param};
+} ## end sub process
 
 # This method is called if specified as a map filter class.
-sub map_filter{
+sub map_filter {
   my $self = shift if ref $_[0] eq __PACKAGE__;
   my @results = @_;
 
-  for ( @results ){
-    
+  for (@results) {
+
   }
 
   return @results;
-}
+} ## end sub map_filter
 
 # This method is called if specified as a reduce filter class.
-sub reduce_filter{
+sub reduce_filter {
   my $self = shift if ref $_[0] eq __PACKAGE__;
   my @results = @_;
   my $result;
-  for ( @results ){
-    
+  for (@results) {
+
   }
 
   return $result;
-}
+} ## end sub reduce_filter
 
 # This method is called if specified as a scalar filter class.
-sub scalar_filter{
+sub scalar_filter {
   my $self = shift if ref $_[0] eq __PACKAGE__;
   my $result = shift;
 
-
   return $result;
-}
+} ## end sub scalar_filter
 
-sub model{
+sub model {
   my $self = shift if ref $_[0] eq __PACKAGE__;
+  my $self_module_name = shift if $_[0]     eq __PACKAGE__;
   my $arg = shift;
   if ($arg) {
     if ($self) { $self->{model} = $arg; }
@@ -71,6 +67,6 @@ sub model{
       return $model;
     }
   } ## end else [ if ($arg) ]
-}
+} ## end sub model
 
 1;

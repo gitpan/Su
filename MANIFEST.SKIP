@@ -58,13 +58,27 @@ Debian_CPANTS.txt
 pod2htmd.tmp
 pod2htmi.tmp
 
-lib/Su/Procs/CheckModuleMethod\.pm
-lib/Su/Procs/.*
+lib/Su/Procs/CheckModuleMethod.pm
+lib/Su/Procs/DBFindHashProc.pm
+lib/Su/Procs/DBFindProc.pm
+
+t/test18/Pkg/TestProc.pm
 perl.exe.stackdump
 bash.exe.stackdump
 
 
 develMemo.html
 develMemo.md
+
+
+lib/Su/Guides/Generating.pod
+
+t/test171/Defs/Defs.pm
+t/test171/Pkg/FooModel.pm
+t/test171/Pkg/FooProc.pm
+t/test171/Pkg/FooProc2.pm
+t/test171/Pkg/FooProc2Model.pm
+t/test171/Pkg/FooProc3.pm
+t/test171/Pkg/FooProc3Model.pm
 
 

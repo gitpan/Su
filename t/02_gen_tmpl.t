@@ -21,7 +21,7 @@ my $fname =
 unlink $fname if ( -f $fname );
 
 my $ret = generate_proc('MyComp');
-is( $ret, 1 );
+like( $ret, qr!/t/test02/MyComp\.pm! );
 
 open my $f, '<',
     $Su::Process::PROCESS_BASE_DIR . "/"

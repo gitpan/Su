@@ -1,3 +1,47 @@
+0.100
+Date:   2011-10-30 22:19:59 +0900
+    Add pod comments.
+Date:   2011-10-30 11:43:20 +0900
+    Add the feature to Su::generate() to add the entry to Defs file without any option if Defs file is already exists.
+Date:   2011-10-30 11:42:50 +0900
+    Add the timestamp and the caller info to the default log output handler.
+Date:   2011-10-16 23:19:12 +0900
+    Remove unnecessary shebang in test scripts.
+Date:   2011-10-16 22:34:15 +0900
+    Add the time and called place to the header of the log message.
+Date:   2011-09-22 18:18:51 +0900
+    Add the option to generate Defs.pm to the method Su::generate.
+    
+    Features
+      - Add the parameter to generate Defs.pm to the method Su::generate.
+    
+    Docs
+      - Add the guide document under Su::Guides package.
+Date:   2011-07-22 22:45:18 +0900
+    Fixed the bug and Add the ResouceProc.pm to load resource strings.
+    
+    Bug Fixes
+      - Fixed the degrade of method Su::setup.
+    
+    Changes
+      - Separate template string to output Defs.pm to the extenal template file.
+      - Add the entry of ResouorceProc to the Defs file.
+Date:   2011-07-21 23:44:34 +0900
+    Add the feature to load localized Model and load values using key prefix and postfix of the Model.
+    
+       Featues
+         - Make it enable to load localized Model you prepared using specified locale variable $MODEL_LOCALE.
+         - Make it enable to load the value from a Model with modified key string using $Su::MODEL_KEY_PREFIX and $Su::MODEL_KEY_POSTFIX.
+         - Add the information message to standard output when you generate Model and Process file.
+         - Add the method Su::generate to generate the pair of Process and Model file.
+    
+       Changes
+         - Subroutine Process::generate_proc and Model::generate_model return the file name of loaded class instead of integer.
+Date:   2011-07-15 12:59:42 +0900
+    Make it enable to spacify the log file directly and adopt to call method Su::resolve directory.
+Date:   2011-07-07 01:16:02 +0900
+    Make it enable to search CustomBuild.pm from include pathes for listing custom build method.
+
 0.011
 Date:   Sat Jun 18 23:50:05 2011 +0900
     Fixed CustomBuild.pm to adopt the change of the package location.

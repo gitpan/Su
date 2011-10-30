@@ -160,6 +160,9 @@ You can specify the package name using the C<dir> parameter.
 Note that if the model name is specified with qualified package name,
 then this C<dir> parameter not effect.
 
+If generation is success, this subroutine return the generated file
+name, else should die or return undef.
+
 =cut
 
 sub generate_model {
@@ -227,7 +230,15 @@ sub generate_model {
 
   my $contents = _gen_contents( $comp_id, @_ );
 
-  print $file $contents;
+  my $ret = print $file $contents;
+
+  if ( $ret == 1 ) {
+    print "generated:$fpath\n";
+    return $fpath;
+  } else {
+    print "output fail:$fpath\n";
+    return undef;
+  }
 
 } ## end sub generate_model
 
@@ -253,12 +264,21 @@ model, then the sample code becomes as follwings:
 
   my $value  = Su::Model::load_model('Pkg::SomeModel')->{value};
 
+If you want to suppress dying because of module require error, then pass
+the second parameter truesy like the following.
+
+  my $model = $mdl->load_model( 'Pkg::SomeModel', 1 );
+
+When the second parameter is passed and load error occured, then this
+method return undef.
+
 =cut
 
 sub load_model {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ );
 
-  my $model_id = shift;
+  my $model_id                        = shift;
+  my $b_suppress_die_and_return_undef = shift;
   my $MODEL_CACHE_HREF = $self ? $self->{models} : $MODEL_CACHE_HREF;
 
   # Return if cache exists.
@@ -278,7 +298,14 @@ sub load_model {
   # Trim the head of dot slash(./) of the file path.
   $model_path =~ s!^\./(.+)!$1!;
 
-  require($model_path);
+  eval { require($model_path); };
+  if ($@) {
+    if ($b_suppress_die_and_return_undef) {
+      return undef;
+    } else {
+      die $@;
+    }
+  } ## end if ($@)
 
   # Recover separator to use as model package separator.
   $model_id =~ s!/!::!g;

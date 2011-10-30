@@ -14,12 +14,18 @@ $fg->_load_defs_file();
 
 ok( $fg->{defs_href} );
 
-$expect = {
+my $expect = {
   'main' => {
     'model' => 'Model',
-    'proc'  => 'MainProc'
-  }
+    'proc'  => 'MainProc',
+  },
+  resource => {
+    proc  => "Su::Procs::ResourceProc",
+    model => "ResourceModel",
+  },
+
 };
 
-is_deeply( $fg->{defs_href}, $expect )
+is_deeply( $fg->{defs_href}, $expect );
 
+unlink 't/test17/Defs/Defs.pm' if ( -f 't/test17/Defs/Defs.pm' );

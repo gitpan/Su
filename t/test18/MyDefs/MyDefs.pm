@@ -4,9 +4,16 @@ use warnings;
 
 my $defs =
   {
-   main =>
-   {
+   main=>   {
     proc=>"MainProc",    model=>"Model",   },
+   resource =>
+   {
+    proc=>"Su::Procs::ResourceProc",
+    model=>"ResourceModel",   },
+
+# [The mark to add the entries]
+
+# Sample:
 #   comp_id2 =>
 #   {
 #    proc=>'MainProc',

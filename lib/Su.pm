@@ -13,9 +13,9 @@ use Su::Template;
 use Su::Model;
 use Su::Log;
 
-use Fatal qw(mkpath);
+use Fatal qw(mkpath open);
 
-our $VERSION = '0.011';
+our $VERSION = '0.100';
 
 our @ISA = qw(Exporter);
 
@@ -32,6 +32,9 @@ our $DEFS_MODULE_NAME = "Defs";
 our $DEFAULT_MODEL_NAME = 'Model';
 
 our $DEFAULT_PROC_NAME = 'MainProc';
+
+# A relative path to place the .tmpl file.
+our $SU_TMPL_DIR = '/Su/templates/';
 
 =head1 NAME
 
@@ -55,67 +58,44 @@ frameworks you prefer in many cases.
 Note that Su framework has nothing to do with unix C<su> (switch
 user) command.
 
-=head3 Divide data and process in your code
+=head3 Prepare Data and Process file
 
-For divide data and process, Su framework provides Model and Process
-classes.  Model and Process classes represent data and process of your
-application.  You define the data used in the application to the
-Model, and describe own code to the Process.  Models and Processes are
-just a simple Perl module and not required to implement any base class
-of Su framework.
+Su provides the method to generate the template of Model and Process.
+You can use method C<generate()> like the following:
 
-=head3 Integrate model and process in your code
+  perl -MSu -e 'Su::generate("Pkg::SomeProc")'
 
-Su integrates Model and Process classes using the definition file. The
-definition file also a Perl module. Su read the definition file and
-inject the data defined in the Model to the corresponding Process,
-then execute that Process.
+Then, the file F<Pkg/SomeProc.pm> and F<Pkg/SomeModel.pm> should be
+generated.
 
-=head3 Other features Su provides
+Now describe your data to the C<$model> field of the generated Model
+file.
 
-Su also provides some useful features.
+ my $model=
+ {
+   field_a =>'value_a'
+ };
 
-For convinience, Su framework provides the methods to generate the
-template of the Model and Process classes.
+And describe your process code to the C<process> method defined in the
+generated Process file like the following:
 
-Su also provides logging and string template.  These features are
-frequently used in many kinds of applications and you can use these
-features without any other dependencies.  Surely you can use other
-modules you prefer with Su framework.
+ sub process{
+   my $self = shift if ref $_[0] eq __PACKAGE__;
+   my $param = shift;
 
-=head2 Standard usage
+   my $ret = "param:" . $param . " and model:" . $model->{field_a};
+   return $ret;
+ }
 
-=head3 Generate Su files
+=head3 Integrate Model and Process
 
-Described above, Su is composed of Model, Process and Definition module.
-The Definition module named C<Defs.pm> integrates Model and Processes.
-So, at first, we generate these files from the command line.
-
-To generate the Model file, type the following command.
-
- perl -MSu=base,./lib/ -e 'Su::gen_model("Pkg::SomeModel")'
-
-To generate the Process file, type the following command.
-
- perl -MSu=base,./lib/ -e 'Su::gen_proc("Pkg::SomeProc")'
-
+Su integrates Model and Processes using the definition file.
 To generate the definition file, type the following command.
 
- perl -MSu=base,./lib/ -e 'Su::gen_defs()'
+ perl -MSu -e 'Su::gen_defs()'
 
-The 'base' parameter means the base directory of the modules to generate.
-
-Instead of these three commands, you can use the simplified single command.
-
- perl -MSu -e 'Su::init("MyPkg")'
-
-This command generates these three files at once.
-
-=head3 Describe Setting file
-
-To call the generated process, you need to define the entry to the generated definition file F<Defs/Defs.pm>.
-
-The Definition file is a perl module, and define the entry at the C<$defs> field of it.
+Then describe your setting to the C<$defs> field defined in the
+generated F<Defs.pm> file.
 
  my $defs =
    {
@@ -126,40 +106,14 @@ The Definition file is a perl module, and define the entry at the C<$defs> field
     },
    };
 
-In this case, the entry id is specified as C<some_entry_id>.
-The Process and Model modules are specified at the field of C<proc> and C<model>, respectively.
+You can also generate F<Defs.pm> using the C<generate> method by
+passing the parameter C<1> as a second parameter.
 
-=head3 Set data to the Model
+  perl -MSu=base,lib -e 'Su::generate("Pkg::SomeProc", 1)'
 
-You can define some data to the C<$model> field of the generated Model.
+Then the file F<Defs.pm> will be generated with Model and Process file.
 
-For example, edit C<Pkg::SomeModel> module like the following.
-
- my $model=
- {
-   field_a =>'value_a'
- };
-
-=head3 Describe the Process
-
-You can describe own code to the C<process> method of the generated Process.
-
-In this case you can edit C<Pkg::SomeProc> like the following.
-
- sub process{
-   my $self = shift if ref $_[0] eq __PACKAGE__;
-
-   my $param = shift;
-   my $ret = "param:" . $param . " and model:" . $model->{field_a};
-   return $ret;
- }
-
-Note that you can refer to the model data previouslly defined at the
-C<$model> field of the Model class via the C<$model> field.
-
-The Process and Model modules are tied as defined in Defs module by Su framework.
-
-=head3 Call the Process via Su
+=head3 Run the process using Su
 
 You can call the process via Su by passing the entry id which defined in
 the definition file F<Defs.pm>.
@@ -167,13 +121,26 @@ the definition file F<Defs.pm>.
  my $su = Su->new;
  my $result = $su->resolve('some_entry_id');
 
+To pass the parameters to the C<process> method in Process, then pass
+the additional parameter to the C<resolve> method.
+
+ my $result = $su->resolve('some_entry_id', 'param1');
+
+=head3 Other features Su provides
+
+Logging and string template are the feature su provides for
+convinience. These features are frequently used in many kinds of
+applications and you can use these features without any other
+dependencies.  Surely you can use other modules you prefer with Su
+framework.
+
 =head2 Additional usage - Filters
 
 The map, reduce and scalar filters can be defined in the definition file.
 
 These filters are Perl module which has the method for filtering the
 result of the process. (In case of C<map> filter, method name is
-C<map_filter>.) You can chain filter modules.  The following code is a
+C<map_filter>.) You can chain filter modules. The following code is a
 sample definition which uses these filters.
 
   my $defs =
@@ -204,7 +171,7 @@ The C<map_filter> method must return the array data type.
 The perl module which has C<reduce_filter> method.
 The parameter of this method is an array which is a result of the
 'process' method of the Process.
-If the map_filters are defined in the C<Defs.pm>, then the map_filters
+If the map filters are defined in the C<Defs.pm>, then the map_filters
 are applied to the result of the process before passed to the reduce
 filter.
 The C<reduce_filter> method must return the scalar data type.
@@ -215,13 +182,70 @@ Note that this method can't chain.
 The perl module which has C<scalar_filter> method.
 The parameter of this method is a scalar which is a result of the
 'process' method of the Process.
-If the map_filters and recude_filters are defined in the C<Defs.pm>,
-then these filters are applied to the result of the process before
-passed to the scalar filter.
+If the C<map_filters> and C<recude_filters> are defined in the
+C<Defs.pm>, then these filters are applied to the result of the
+process before passed to the scalar filter.
 
 The C<scalar_filter> method must return the scalar data type.
 
 =back
+
+=head1 ATTRIBUTES
+
+=head2 C<$MODEL_LOCALE>
+
+Set the locale string like 'ja_JP' to load locale specific Model
+module. Locale specific Model has the postfix in it's name like
+'Pkf::ModelName__ja_JP'.
+
+Then you should set the locale like this.
+
+  $Su::MODEL_LOCALE = 'ja_JP';
+
+=cut
+
+our $MODEL_LOCALE = '';
+
+=head2 C<$MODEL_KEY_PREFIX>
+
+The hash reference which contains the key prefixes of the Model.
+The key of this hash is a name of the model to apply this prefix.
+
+  $MODEL_KEY_PREFIX = {
+    'pkg::SomeModel'=>'pre1',
+  };
+
+In this example, the key string 'pre1_key1' defined in
+'pkg::SomeModel' is automatically converted to 'key1'. So you can
+access customized value using key 'key1'.
+
+If the modified key is not exist, then the value of original key
+should used.
+
+=cut
+
+our $MODEL_KEY_PREFIX = {};
+
+=head2 C<$MODEL_KEY_POSTFIX>
+
+The hash reference which contains the key postfixes of the Model.
+The key of this hash is a name of the model to apply this postfix.
+
+This variable work same as $MODEL_KEY_PREFIX.
+
+=cut
+
+our $MODEL_KEY_POSTFIX = {};
+
+=begin comment
+
+The flag to use global defs setting set by the method Su::setup() directly, instead of read from Defs file.
+
+=end comment
+
+=cut
+
+our $USE_GLOBAL_SETUP = undef;
 
 =head1 METHODS
 
@@ -294,6 +318,13 @@ You can specify the loading definition file as a parameter of this method.
  $su->_load_defs_file();
  $su->_load_defs_file('Defs::CustomDefs');
 
+If the Defs file is already loaded, do nothing and just return it's hash.
+
+If you want to reload defs file force, then pass the second parameter
+as reload option.
+
+  $su->_load_defs_file( "Defs::Defs", 1 );
+
 =end comment
 
 =cut
@@ -311,20 +342,24 @@ sub _load_defs_file {
   #   return;
   # }
 
-  my $defs_mod_name = shift || "Defs::Defs";
+  my $defs_mod_name  = shift || "Defs::Defs";
+  my $b_force_reload = shift || undef;
 
-  # Defs file tring to load is already loaded.
-  if ($self) {
-    if ( defined $self->{defs_module_name}
-      && $self->{defs_module_name} eq $defs_mod_name )
-    {
-      return;
+  if ( !$b_force_reload ) {
+
+    # Defs file tring to load is already loaded.
+    if ($self) {
+      if ( defined $self->{defs_module_name}
+        && $self->{defs_module_name} eq $defs_mod_name )
+      {
+        return $self->{defs_href};
+      }
+    } else {
+      if ( defined $defs_module_name && $defs_module_name eq $defs_mod_name ) {
+        return $info_href;
+      }
     }
-  } else {
-    if ( defined $defs_module_name && $defs_module_name eq $defs_mod_name ) {
-      return;
-    }
-  }
+  } ## end if ( !$b_force_reload )
 
   # Back up the Defs module name.
   if ($self) {
@@ -340,6 +375,10 @@ sub _load_defs_file {
   #   $info_path = $BASE_DIR . "/" . $DEFS_DIR . "/" . $DEFS_MOD_NAME . ".pm";
   # }
 
+  # Unload Defs module.
+  if ($b_force_reload) {
+    _unload_module($defs_mod_name);
+  }
   my $proc = Su::Process->new;
   $proc->load_module($defs_mod_name);
 
@@ -549,6 +588,24 @@ return the result as a scalar.
    return $result;
  }
 
+This method change the Model file to load by the specified locale.
+
+If you specify the resource locale to $Su::MODEL_LOCALE, this method
+load locale specific Model automatically,  and locale specific Model
+is not exist, then this method tring to load default Model.
+
+Set the locale variable like the following:
+
+  $Su::MODEL_LOCALE = 'ja_JP';
+
+The name of locale specific Model is like the following:
+
+  pkg::SomeModel__ja_JP
+
+And the file name becomes like this.
+
+  pkg/SomeModel__ja_JP.pm
+
 =cut
 
 sub resolve {
@@ -557,21 +614,43 @@ sub resolve {
   my $comp_id = shift;
   my @ctx     = @_;
 
-  if ($self) {
+  my $info_href;
+
+  # If the flag $USE_GLOBAL_SETUP is set, use the setting set by the
+  # method Su::setup.
+  if ($USE_GLOBAL_SETUP) {
+    $info_href = $Su::info_href;
+  } elsif ( $self
+    && UNIVERSAL::isa( $self, 'UNIVERSAL' )
+    && $self->isa('Su') )
+  {
 
     # If hash is passed, just use passed info, and not load defs file.
     $self->_load_defs_file( $self->{defs_module} )
       unless ref $comp_id eq 'HASH';
   } else {
-    _load_defs_file();
-  }
+
+    # called as global method like 'Su::resolve("id")'.
+    unless ( ref $comp_id eq 'HASH' ) {
+
+      # If Su::setup is called, then use global setting, else load setting
+      # from defs file.
+      $info_href =
+        keys %{$Su::info_href} ? $Su::info_href : _load_defs_file();
+
+      # _load_defs_file();
+      Su::Log->trace( 'comp_id:' . $comp_id );
+      Su::Log->trace( 'new set:' . Dumper($info_href) );
+    } ## end unless ( ref $comp_id eq 'HASH')
+
+    # _load_defs_file();
+  } ## end else [ if ($USE_GLOBAL_SETUP)]
 
 # If Su->{base} is specified, this effects to Template and Model, else used own value Template and Model has.
   my $BASE_DIR = $self->{base};
   my $MODEL_DIR = $self->{model} ? $self->{model} : $Su::Model::MODEL_DIR;
   my $TEMPLATE_DIR =
     $self->{template} ? $self->{template} : $Su::Template::TEMPLATE_DIR;
-  my $info_href;
 
   #  $info_href = $self->{defs_href} ? $self->{defs_href} : $Su::info_href;
 
@@ -581,7 +660,9 @@ sub resolve {
 
     # Set dummy id to use passed parameter.
     $comp_id = 'dmy_id';
-  } else {
+  } elsif ( !$info_href ) {
+
+    # $self->{defs_href} and $Su::info_href is set by _load_defs_file().
     $info_href = $self->{defs_href} ? $self->{defs_href} : $Su::info_href;
   }
 
@@ -648,11 +729,48 @@ sub resolve {
       my $mdl = Su::Model->new( base => $BASE_DIR, dir => $MODEL_DIR );
       my $loading_model = $info_href->{$comp_id}->{model};
       chomp $loading_model;
+
+      # Add locale postfix if postfix is specified.
+      my $base_loading_model = $loading_model;
+      $loading_model .= '__' . $Su::MODEL_LOCALE if ($Su::MODEL_LOCALE);
+
+      # If locale specific model is not exist, then load default model file.
+      Su::Log->trace( 'loading model:' . $loading_model );
       if ($loading_model) {
+        my $model = $mdl->load_model( $loading_model, 'suppress_error' );
+        $model = $mdl->load_model($base_loading_model) unless $model;
 
-        $tmpl_module->model( $mdl->load_model($loading_model) );
+        # Get the prefix or postfix setting for loading model.
+        my $MODEL_KEY_PREFIX  = $MODEL_KEY_PREFIX->{$loading_model}  || '';
+        my $MODEL_KEY_POSTFIX = $MODEL_KEY_POSTFIX->{$loading_model} || '';
 
-      }
+        # If the key prefix or postfix is specified, copy the value of the
+        # modified key to original key value.
+        if ( $MODEL_KEY_PREFIX || $MODEL_KEY_POSTFIX ) {
+          my $new_model = {};
+          foreach my $key ( keys %{$model} ) {
+            if (
+              exists $model->{ $MODEL_KEY_PREFIX . '__' 
+                  . $key . '__'
+                  . $MODEL_KEY_POSTFIX } )
+            {
+              $new_model->{$key} =
+                $model->{ $MODEL_KEY_PREFIX . '__' 
+                  . $key . '__'
+                  . $MODEL_KEY_POSTFIX };
+            } elsif ( exists $model->{ $MODEL_KEY_PREFIX . '__' . $key } ) {
+              $new_model->{$key} = $model->{ $MODEL_KEY_PREFIX . '__' . $key };
+            } elsif ( exists $model->{ $key . '__' . $MODEL_KEY_POSTFIX } ) {
+              $new_model->{$key} = $model->{ $key . '__' . $MODEL_KEY_POSTFIX };
+            } else {
+              $new_model->{$key} = $model->{$key};
+            }
+          } ## end foreach my $key ( keys %{$model...})
+          $model = $new_model;
+        } ## end if ( $MODEL_KEY_PREFIX...)
+        $tmpl_module->model($model);
+
+      } ## end if ($loading_model)
     } ## end else [ if ( ref $info_href->{...})]
   } ## end if ( $tmpl_module->can...)
 
@@ -750,6 +868,10 @@ Defs, Model and Process module.
 
  Su::init('PkgName');
 
+This method can be called from command line like the following:
+
+ perl -MSu=base,base/directory -e 'Su::init("Pkg::SomeModule")'
+
 =cut
 
 sub init {
@@ -805,7 +927,114 @@ sub gen_proc {
   my $proc = Su::Process->new( base => $BASE_DIR );
   $proc->generate_proc(@_);
 
+  # my $generated_file = $proc->generate_proc(@_);
+
 } ## end sub gen_proc
+
+=item generate()
+
+Generate a pair of Process and Model file.
+
+  my $su = Su->new;
+  $su->generate('pkg::SomeProc');
+
+This example generates C<pkg/SomeProc.pm> and C<pkg/SomeModl.pm>.
+
+You can use this method from the commandline.
+
+  perl -MSu=base,lib -e 'Su::generate("Pkg::SomeProc", 1)'
+  perl -MSu=base,lib -e 'Su::generate("Pkg::SomeProc", "Defs::MyDefs")'
+
+If the second parameter is specified, the Defs file will generated.
+
+=cut
+
+sub generate {
+  my $self    = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $fqcn    = shift;
+  my $gen_def = shift;
+
+  # Save original fqcn.
+  my $proc_fqcn = $fqcn;
+  my $model_fqcn;
+
+  return unless $fqcn;
+
+  # Generate process.
+  my $proc_fname = $self ? $self->gen_proc($fqcn) : gen_proc($fqcn);
+
+  # Check whether the parameter has the postfix 'Proc'.
+  if ( $fqcn =~ /.+Proc$/ ) {
+
+    # Replace 'Proc' postfix to 'Model' to generate Model file.
+    $fqcn =~ s/(.+)Proc$/$1Model/;
+  } else {
+
+    # Just add the postfix 'Model' to the passed param.
+    $fqcn .= "Model";
+  }
+  $model_fqcn = $fqcn;
+
+  # Generate model.
+  my $model_fname = $self ? $self->gen_model($fqcn) : gen_model($fqcn);
+
+  $proc_fname =~ s/\.pm$//;
+  $proc_fname =~ s!/!::!g;
+
+  $model_fname =~ s/\.pm$//;
+  $model_fname =~ s!/!::!g;
+
+  my $defs_fname = _is_string($gen_def) ? $gen_def : 'Defs::Defs';
+
+  # Generate defs file.
+  if (
+    $gen_def
+    || (
+      $self ? $self->_is_defs_exist($defs_fname) : _is_defs_exist($defs_fname) )
+    )
+  {
+    my @pkg_arr = split( '::', $fqcn );
+    my $pkg = @pkg_arr[ 0 .. ( scalar @pkg_arr - 2 ) ];
+
+    if ($self) {
+      $self->gen_defs(
+        name => $defs_fname,
+
+        # package => $pkg,
+        proc                                 => $proc_fqcn,
+        model                                => $model_fqcn,
+        just_add_entry_if_defs_already_exist => 1,
+        use_proc_name_as_entry_id            => 1,
+      );
+
+      # $self->gen_defs( package => $defs_fname );
+    } else {
+      gen_defs(
+        name => $defs_fname,
+
+        # package => $pkg,
+        proc                                 => $proc_fqcn,
+        model                                => $model_fqcn,
+        just_add_entry_if_defs_already_exist => 1,
+        use_proc_name_as_entry_id            => 1,
+      );
+
+    } ## end else [ if ($self) ]
+  } ## end if ( $gen_def || ( $self...))
+  else {
+    my $entry_id = _make_entry_id($proc_fqcn);
+    my $output   = <<"__HERE__";
+An example of the entry to add to the Defs file.
+
+  $entry_id => {
+    proc  => '$proc_fqcn',
+    model => '$model_fqcn',
+  },
+__HERE__
+
+    print $output;
+  } ## end else [ if ( $gen_def || ( $self...))]
+} ## end sub generate
 
 =item gen_defs()
 
@@ -815,16 +1044,90 @@ Generate a definition file.
 
 You can specify the package name of the definition file as a parameter.
 
- gen_defs('Defs::Defs')
+ gen_defs('Defs::Defs');
 
-Also you can specify other parameters as hash.
+Also you can specify other parameters as a hash.
 
- gen_defs(name=>'Defs::Defs',package=>'pkg', proc=>'MyProc',model=>'MyModel')
+ gen_defs(name=>'Defs::Defs',
+          package=>'pkg',
+          proc=>'MyProc',
+          model=>'MyModel',
+          just_add_entry_if_defs_already_exist => 1,
+          use_proc_name_as_entry_id            => 1)
+
+param use_proc_name_as_entry_id:
+Set the proc name as entry id instead of default id 'main'.
+
+param just_add_entry_if_defs_already_exist:
+If the specified Defs file is already exist, then add the entry to that Defs file.
+
+return:
+1: If generation success.
+0: If the Defs file already exists.
 
 =cut
 
 sub gen_defs {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+
+  my $ret =
+      $self
+    ? $self->_gen_defs_with_template_id( 'DefsPm', @_ )
+    : _gen_defs_with_template_id( 'DefsPm', @_ );
+
+  # Exclude the case of single parameter.
+  if ( scalar @_ != 1 ) {
+    my %defs_h = @_;
+    if ( $ret == 0 && !$defs_h{just_add_entry_if_defs_already_exist} ) {
+      warn "[WARN] Defs file alredy exists.";
+    }
+  } ## end if ( scalar @_ != 1 )
+  return $ret;
+
+} ## end sub gen_defs
+
+=begin comment
+
+param template_id: File name to load template string.
+return:
+  1: If generation success.
+  0: If the Defs file already exists.
+
+=end comment
+
+=cut
+
+sub _gen_defs_with_template_id {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $template_id = shift;
+  my $template_string;
+  use File::Basename;
+
+  my $template_fname =
+    dirname(__FILE__) . $SU_TMPL_DIR . $template_id . '.tmpl';
+
+  open( my $F, '<', $template_fname ) or die $! . ":$template_fname";
+  $template_string = join '', <$F>;
+
+  return $self
+    ? $self->_gen_defs_internal( $template_string, @_ )
+    : _gen_defs_internal( $template_string, @_ );
+} ## end sub _gen_defs_with_template_id
+
+=begin comment
+
+param1: Template string to expand.
+return:
+  1: If generation success.
+  0: If the Defs file already exists.
+
+=end comment
+
+=cut
+
+sub _gen_defs_internal {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $template_string = shift;
   my $defs_id;
   my %defs_h;
 
@@ -885,60 +1188,102 @@ sub gen_defs {
     $defs_id = $defs_dir_for_package . '::' . $defs_id;
   } ## end if ( $defs_id !~ /::/ )
 
+  my $defs_proc_name  = $defs_h{proc}    || $DEFAULT_PROC_NAME;
+  my $defs_model_name = $defs_h{model}   || $DEFAULT_MODEL_NAME;
+  my $pkg             = $defs_h{package} || $defs_h{pkg} || "";
+  my $main_entry_id = 'main';
+
+  # If the Defs file is already exist.
+  if ( -f $fpath ) {
+
+    # Add the entry to the Defs file which already exists.
+    if ( $defs_h{just_add_entry_if_defs_already_exist} ) {
+
+      my $entry_id = _make_entry_id($defs_proc_name);
+      open( my $I, $fpath );
+      my $content = join '', <$I>;
+      close $I;
+      my $tmpl_str = <<"__HERE__";
+   ,
+   ${entry_id} =>
+   {
+    proc=>"${pkg}${defs_proc_name}",
+    model=>"${pkg}${defs_model_name}",
+   },
+__HERE__
+
+      $content =~ s/(# \[The mark to add the entries\])/$tmpl_str\n$1/;
+
+      open( my $FO, '>', $fpath );
+      print $FO $content;
+      close $FO;
+    } else {
+
+      # Do Nothing.
+    }
+    return 0;
+  } ## end if ( -f $fpath )
+
+  # Make entry id.
+  if ( $defs_h{use_proc_name_as_entry_id} ) {
+    $main_entry_id = _make_entry_id($defs_proc_name);
+  }
+
   open( my $file, '>', $fpath );
 
   my $ft = Su::Template->new;
 
-  my $defs_proc_name  = $defs_h{proc}    || $DEFAULT_PROC_NAME;
-  my $defs_model_name = $defs_h{model}   || $DEFAULT_MODEL_NAME;
-  my $pkg             = $defs_h{package} || $defs_h{pkg};
   use Data::Dumper;
 
   # Make package name, else remain empty.
   $pkg = $pkg ? ( $pkg . '::' ) : '';
 
-  my $contents = $ft->expand(
-    <<'__TMPL__', $defs_id, $pkg, $defs_proc_name, $defs_model_name );
-% my $defs_pkg = shift;
-% my $pkg = shift;
-% my $proc = shift;
-% my $model = shift;
-package <%=$defs_pkg%>;
-use strict;
-use warnings;
-
-my $defs =
-  {
-   main =>
-   {
-    proc=>"<%="${pkg}${proc}"~%>",
-    model=>"<%="${pkg}${model}"~%>",
-   },
-#   comp_id2 =>
-#   {
-#    proc=>'MainProc',
-#    model=>['Model01','Model02','Model03'],
-#    map_filter=>'FilterProc'    # or ['Filter01','Filter02']
-#    reduce_filter=>'ReduceProc'  # reduce filter can apply at once.
-#    scalar_filter=>'ScalarProc'  # or ['Filter01','Filter02']
-#   }
-  };
-
-sub defs{
-  shift if ($_[0] eq __PACKAGE__);
-
-  my $arg = shift;
-  if ($arg){
-    $defs = $arg;
-  }else{
-    return $defs;
-  }
-}
-__TMPL__
+  my $contents =
+    $ft->expand( $template_string, $defs_id, $pkg, $defs_proc_name,
+    $defs_model_name, $main_entry_id );
 
   print $file $contents;
+  return 1;
 
-} ## end sub gen_defs
+} ## end sub _gen_defs_internal
+
+=begin comment
+
+Return 1 if the type of the passed argment is a string.
+If the parameter type is a number or reference then this method return 0.
+If the string "true" is passed, this method return 0;
+
+=end comment
+
+=cut
+
+sub _is_string {
+  my $arg = shift;
+  if ( $arg && ( $arg ^ $arg ) ne '0' && !( ref $arg ) && $arg ne 'true' ) {
+    return 1;
+  } else {
+    return 0;
+  }
+
+} ## end sub _is_string
+
+=begin comment
+
+Extract the class name from the passed parameter and make lower case it's firsr charactor.
+
+param: The string of fully qualified name.
+return: The class name converted to lower case of it's first charactor.
+
+=end comment
+
+=cut
+
+sub _make_entry_id {
+  my $arg = shift;
+  my @name_elem = split( '::', $arg );
+  return lcfirst $name_elem[ scalar @name_elem - 1 ];
+
+} ## end sub _make_entry_id
 
 =begin comment
 
@@ -966,6 +1311,64 @@ Note: Currently not used.
 #   return 1;
 # } ## end sub is_hash_empty
 
+=begin comment
+
+Unload the passed module.
+
+  _unload_module('Defs::Defs.pm');
+
+=end comment
+
+=cut
+
+sub _unload_module {
+  my $self       = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $fqmn       = shift;
+  my @path_elems = split '::', $fqmn;
+
+  {
+    no strict 'refs';
+    @{ $fqmn . '::ISA' } = ();
+    %{ $fqmn . '::' }    = ();
+    delete ${ ( join '::', @path_elems[ 0 .. $#path_elems - 1 ] ) . '::' }
+      { $path_elems[-1] . '::' };
+    delete $INC{ ( join '/', @path_elems ) . '.pm' };
+  }
+
+} ## end sub _unload_module
+
+=begin comment
+
+Return true if the Defs file is exist.
+
+param: Defs module name or file path.
+
+return:
+ 1: If the Defs file exist.
+ undef: If the Defs file not exist.
+
+=end comment
+
+=cut
+
+sub _is_defs_exist {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $defs_id = shift || $DEFS_MODULE_NAME;
+
+  my $BASE_DIR = $self->{base} ? $self->{base} : $BASE_DIR;
+  my $DEFS_DIR = $self->{defs} ? $self->{defs} : $DEFS_DIR;
+
+  my $defs_id_filepath = $defs_id;
+  $defs_id_filepath =~ s/::/\//;
+  my $fpath;
+  if ( $defs_id =~ /::|\// ) {
+    $fpath = $BASE_DIR . "/" . $defs_id_filepath . ".pm";
+  } else {
+    $fpath = $BASE_DIR . "/" . $DEFS_DIR . "/" . $defs_id_filepath . ".pm";
+  }
+  return -f $fpath;
+} ## end sub _is_defs_exist
+
 1;
 
 __END__
@@ -986,5 +1389,4 @@ This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
-
 

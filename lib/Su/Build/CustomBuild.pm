@@ -40,12 +40,16 @@ sub ACTION_list {
   my $pkg_name = __PACKAGE__;
 
   $pkg_name =~ s/::/\//g;
-  open( my $f, "<", 'lib/' . $pkg_name . ".pm" );
-  for (<$f>) {
-    if ( $_ =~ /sub ACTION_([a-zA-Z0-9_]+?)\s*{/ ) {
-      print $1 . "\n";
+  for my $path (@INC) {
+    next if ( !-e $path . '/' . $pkg_name . ".pm" );
+    open( my $f, "<", $path . '/' . $pkg_name . ".pm" );
+    for (<$f>) {
+      if ( $_ =~ /sub ACTION_([a-zA-Z0-9_]+?)\s*{/ ) {
+        print $1 . "\n";
+      }
     }
-  }
+  } ## end for my $path (@INC)
+
 } ## end sub ACTION_list
 
 sub ACTION_add_changes {
@@ -387,7 +391,7 @@ sub ACTION_ms_test {
 
   my @f = glob("Su-*\.tar\.gz");
   unless (@f) {
-    die "dist file not exist.";
+    die "Dist file not exist. Place the tar.gz file to the current directory.";
   }
   print "target file:" . $f[0] . "\n";
 

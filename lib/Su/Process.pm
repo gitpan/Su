@@ -137,7 +137,8 @@ This method can be used from the command line like the following.
 
  perl -MSu::Process -e '{generate_proc("MainProc")}'
 
-If the generation is success, then return 1, else die.
+If generation is success, this subroutine return the generated file
+name, else should die or return undef.
 
 =cut
 
@@ -194,7 +195,14 @@ sub generate_proc {
   $contents = eval( "return " . $fun . "(\"$comp_id\");" );
   $@ and die $@;
 
-  print $file $contents;
+  my $ret = print $file $contents;
+  if ( $ret == 1 ) {
+    print "generated:$fpath\n";
+    return $fpath;
+  } else {
+    print "output fail:$fpath\n";
+    return undef;
+  }
 
 } ## end sub generate_proc
 
@@ -226,7 +234,8 @@ sub new {
 
 # The main method for this process class.
 sub process{
-  my $self = shift if ref $_[0] eq __PACKAGE__;
+  my $self = shift if ($_[0] && ref $_[0] eq __PACKAGE__);
+  my $self_module_name = shift if ($_[0] && $_[0] eq __PACKAGE__);
   my $model = keys %{ $self->{model} } ? $self->{model} : $model;
 
   my $param = shift;
@@ -273,6 +282,7 @@ sub scalar_filter{
 
 sub model{
   my $self = shift if ref $_[0] eq __PACKAGE__;
+  my $self_module_name = shift if $_[0] eq __PACKAGE__;
   my $arg = shift;
   if ($arg) {
     if ($self) { $self->{model} = $arg; }

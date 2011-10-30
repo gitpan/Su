@@ -17,13 +17,14 @@ Su::setup(
   menu => { proc => 'Templates::MenuTmpl', model => 'Models::MenuModel' },
 );
 
-my $fgen = Su->new;
+# my $fgen = Su->new;
 
 # For the first generation.
 #Su::Model::gen_model('MenuModel', qw(field1 value1 field2 value2 field3 value3));
 #Su::Template::gen_tmpl('MenuTmpl');
 
-#my $ret = $fgen->resolve("menu");
+# my $ret = $fgen->resolve("menu");
+
 my $ret = Su::resolve('menu');
 
 #diag($ret);

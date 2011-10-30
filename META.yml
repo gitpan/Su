@@ -13,15 +13,17 @@ name: Su
 provides:
   Su:
     file: lib/Su.pm
-    version: 0.011
+    version: 0.100
   Su::Log:
     file: lib/Su/Log.pm
   Su::Model:
     file: lib/Su/Model.pm
   Su::Process:
     file: lib/Su/Process.pm
+  Su::Procs::ResourceProc:
+    file: lib/Su/Procs/ResourceProc.pm
   Su::Template:
     file: lib/Su/Template.pm
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.011
+version: 0.100

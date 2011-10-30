@@ -11,7 +11,7 @@ my $ret = $obj->log_test;
 
 # Simply output test.
 
-is( $ret, "[INFO]info test.\n" );
+like( $ret, qr/\[.+?\]\[INFO\]info test\.\n/ );
 
 # Log disable test.
 
@@ -42,7 +42,7 @@ $log->enable;
 $ret = undef;
 $ret = $obj->log_test;
 
-is( $ret, "[INFO]info test.\n" );
+like( $ret, qr/\[INFO\]info test\.\n/ );
 
 # Clear all flag and normally logging test.
 
@@ -51,7 +51,7 @@ $log->clear_all_flags;
 $ret = undef;
 $ret = $obj->log_test;
 
-is( $ret, "[INFO]info test.\n" );
+like( $ret, qr/\[INFO\]info test\.\n/ );
 
 # Log disable test by off method.
 
@@ -67,7 +67,7 @@ ok( !$ret );
 $ret = undef;
 $ret = $log->info("main test.");
 
-is( $ret, "[INFO]main test.\n" );
+like( $ret, qr/\[INFO\]main test\.\n/ );
 
 # Log enable test by on method.
 
@@ -76,14 +76,14 @@ $log->on('Procs::ForLogTest');
 $ret = undef;
 $ret = $obj->log_test;
 
-is( $ret, "[INFO]info test.\n" );
+like( $ret, qr/\[INFO\]info test\.\n/ );
 
 # Whether anoter package can logging.
 
 $ret = undef;
 $ret = $log->info("main test.");
 
-is( $ret, "[INFO]main test.\n" );
+like( $ret, qr/\[INFO\]main test\.\n/ );
 
 ## Tests for log level.
 
@@ -93,7 +93,7 @@ ok( !$log->trace('trace message') );
 # Make trace level output the log.
 $log->set_level('trace');
 $ret = $log->trace('trace message');
-is( $ret, "[TRACE]trace message\n" );
+like( $ret, qr/\[TRACE\]trace message\n/ );
 
 # Reset the log level, then trace level can not output.
 $log->set_level('info');
@@ -108,7 +108,7 @@ ok( $log->crit('info message') );
 $log->set_global_log_level('trace');
 
 $ret = $log->trace('trace message');
-is( $ret, "[TRACE]trace message\n" );
+like( $ret, qr/\[TRACE\]trace message\n/ );
 
 # Global level(error) overwhelm instance level(info).
 
@@ -120,22 +120,22 @@ ok( !$log->info('info message') );
 $log->set_global_log_level(undef);
 $ret = $obj->many_level_log;
 
-is(
-  $ret, "[INFO]info test.
-[WARN]warn test.
-[ERROR]error test.
-[CRIT]crit test.
-"
+like(
+  $ret, qr/\[.+?\]\[INFO\]info test\.
+\[.+?\]\[WARN\]warn test\.
+\[.+?\]\[ERROR\]error test\.
+\[.+?\]\[CRIT\]crit test\.
+/
 );
 
 $log->on( 'Procs::ForLogTest', 'error' );
 
 $ret = $obj->many_level_log;
 
-is(
-  $ret, "[ERROR]error test.
-[CRIT]crit test.
-"
+like(
+  $ret, qr/\[.+?\]\[ERROR\]error test\.
+\[.+?\]\[CRIT\]crit test\.
+/
 );
 
 $ret = $log->error("error");

@@ -7,7 +7,7 @@ Su::Log->on('ForTest');
 my $obj = ForTest->new;
 my $ret = $obj->info_test();
 
-is( $ret, "[INFO]info message.\n" );
+like( $ret, qr/\[INFO\]info message\.\n/ );
 
 $ret = $obj->trace_test();
 ok( !$ret );
@@ -15,7 +15,7 @@ ok( !$ret );
 # Su::Log->set_level("trace");
 Su::Log->set_global_log_level("trace");
 $ret = $obj->trace_test();
-is( $ret, "[TRACE]trace message.\n" );
+like( $ret, qr/\[TRACE\]trace message\.\n/ );
 Su::Log->set_global_log_level(undef);
 
 package Test15_Foo;
@@ -53,7 +53,8 @@ sub hndl {
   $log_msg = join '', 'custom log handler:', @_;
 
   #  diag($log_msg);
-  is( $log_msg, "custom log handler:[INFO]info from Test15_Foo::fn02()" );
+  like( $log_msg,
+    qr/custom log handler:\[INFO\]info from Test15_Foo::fn02\(\)/ );
   return $log_msg;
 } ## end sub hndl
 
@@ -66,7 +67,7 @@ $ret = $obj->fn01('arg');
 
 #diag( "ret is:" . $ret );
 #diag(@Su::Log::target_class);
-is( $ret, "[INFO]info from Test15_Foo::fn01()\n" );
+like( $ret, qr/\[INFO\]info from Test15_Foo::fn01\(\)\n/ );
 
 $ret = undef;
 $ret = $obj->fn01_off;
@@ -78,16 +79,16 @@ ok( !$ret, "Nothing logged because module is not registered." );
 Su::Log->enable;
 $ret = $obj->fn01;
 
-is(
+like(
   $ret,
-  "[INFO]info from Test15_Foo::fn01()\n",
+  qr/\[INFO\]info from Test15_Foo::fn01\(\)\n/,
   "Logging is on, because all flag is set."
 );
 
 # test object specific log handler.
 
 $ret = $obj->fn02;
-is( $ret, "custom log handler:[INFO]info from Test15_Foo::fn02()" );
+like( $ret, qr/custom log handler:\[INFO\]info from Test15_Foo::fn02\(\)/ );
 
 # test for functional usage.
 
@@ -102,7 +103,7 @@ Su::Log->clear_all_flags;
 # Register main package.
 Su::Log->on(__PACKAGE__);
 
-is( $log->info("info message"), "[INFO]info message\n" );
+like( $log->info("info message"), qr/\[INFO\]info message\n/ );
 
 # Unregister main package.
 Su::Log->off(__PACKAGE__);
@@ -117,7 +118,7 @@ my $log = Su::Log->new;
 ok( $log->info("info message") );
 
 # Su::Log->on(__PACKAGE__);
-is( $log->info("info message2"), "[INFO]info message2\n" );
+like( $log->info("info message2"), qr/\[INFO\]info message2\n/ );
 
 # Test to use the class specified off flag.
 Su::Log->clear_all_flags;

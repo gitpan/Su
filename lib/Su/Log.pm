@@ -41,6 +41,9 @@ Su::Log - A simple Logger which filters output by log level and regexp of the ta
   # Clear the logging state.
   $log->clear(qr/Pkg::.*/);
 
+  # Output logs to the file.
+  $log->log_handler('path/to/logfile');
+
 =head1 DESCRIPTION
 
 Su::Log is a simple Logger module.
@@ -89,7 +92,7 @@ BEGIN: {
 
   # Set default handler.
   $log_handler =
-    sub { my $msg = join( '', @_, "\n" ); print $msg; return $msg; };
+    sub { my $msg = _make_log_string(@_); print $msg; return $msg; };
 
 } ## end BEGIN:
 
@@ -413,7 +416,7 @@ sub is_target {
 
 Su::Log->set_level("trace");
 
-Set the log level which effects instance scope.
+Set the log level which effects instance scope. Default level is B<info>;
 
 =cut
 
@@ -586,7 +589,7 @@ sub log {
 
 =item log_handler()
 
-Specify the passed method as the log handler of L<Su::Log|Su::Log>.
+Set the passed method as the log handler of L<Su::Log|Su::Log>.
 
   $log->log_handler(\&hndl);
   $log->info("info message");
@@ -595,21 +598,71 @@ Specify the passed method as the log handler of L<Su::Log|Su::Log>.
     print(join 'custom log handler:', @_);
   }
 
+  $log->log_handler(
+    sub {
+      my $level = shift;
+      my $msg   = @_;
+      print $F $level . join( ' ', @_ ) . "\n";
+    }
+  );
+
+If the passed parameter is string, then automatically the handler is
+set to output log to the passed file name.
+
 =cut
 
 sub log_handler {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ );
   my $handler = shift;
+
+  # Work as setter method.
   if ($handler) {
     if ($self) {
-      $self->{log_handler} = $handler;
+      if ( ref $handler eq 'CODE' ) {
+        $self->{log_handler} = $handler;
+      } else {
+
+        # $handler is passed as log file name.
+        $self->{log_handler} = _make_default_log_file_handler($handler);
+      }
     } else {
-      $log_handler = $handler;
-    }
+
+      # $log_handler = $handler;
+      if ( ref $handler eq 'CODE' ) {
+        $log_handler = $handler;
+      } else {
+
+        # $handler is passed as log file name.
+        $log_handler = _make_default_log_file_handler($handler);
+      }
+
+    } ## end else [ if ($self) ]
   } else {
+
+    # The param is omitted, just work as a getter method.
     return $log_handler;
   }
 } ## end sub log_handler
+
+=begin comment
+
+Return the handler to output log to the log file.  Passed parameter is
+a log file name.
+
+=end comment
+
+=cut
+
+sub _make_default_log_file_handler {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $log_file_name = shift;
+  open( my $F, '>>', $log_file_name ) or die $!;
+  return sub {
+    my $level = shift;
+    my $msg   = _make_log_string(@_);
+    print $F $level . $msg;
+  };
+} ## end sub _make_default_log_file_handler
 
 =begin comment
 
@@ -627,6 +680,26 @@ sub _is_empty {
   }
   return 0;
 } ## end sub _is_empty
+
+=begin comment
+
+Add the prefix of time and the information of called place to the passed parameter and return it as a string.
+
+=end comment
+
+=cut
+
+sub _make_log_string {
+  my ( $s, $mi, $h, $d, $m, $y ) = ( localtime(time) )[ 0 .. 6 ];
+  my $date_prefix = sprintf "%04d/%02d/%02d %02d:%02d:%02d", $y + 1900, $m + 1,
+    $d,
+    $h, $mi, $s;
+  my ( $pkg, $file, $line ) = caller;
+
+  '[' . $date_prefix . '][' . $file . ':L'
+## . $pkg . ':L'
+    . $line . ']' . join( '', @_, "\n" );
+} ## end sub _make_log_string
 
 =pod
 
