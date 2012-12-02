@@ -1,6 +1,6 @@
 use Test::More tests => 3;
 
-use lib qw(t/test12 ../lib);
+use lib qw(lib t/test12 ../lib);
 
 use Su;
 use Su::Template;

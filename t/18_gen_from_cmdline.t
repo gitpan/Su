@@ -1,4 +1,4 @@
-use lib qw(../t/test18 t/test18 lib);
+use lib qw(lib ../lib ../t/test18 t/test18 );
 use Su;
 use Data::Dumper;
 use Test::More tests => 11;
@@ -24,7 +24,7 @@ SKIP: {
 
   # Set base form Su::Template package.
   my $cmd =
-"perl -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc(\"Pkg::TestProc\")'";
+"perl -Ilib -I../lib -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc(\"Pkg::TestProc\")'";
   $cmd = convert_sep($cmd);
 
   #diag($cmd);
@@ -41,7 +41,7 @@ SKIP: {
 
   # Set base form Su package.
   $cmd =
-"perl -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc(\"SuPkg::TestProc\")'";
+"perl -Ilib -I../lib -MSu::Process=base,./t/test18/ -e 'Su::Process::generate_proc(\"SuPkg::TestProc\")'";
   $cmd = convert_sep($cmd);
   `$cmd`;
 
@@ -54,7 +54,7 @@ SKIP: {
   }
 
   $cmd =
-"perl -MSu::Model=base,./t/test18/ -e 'Su::Model::generate_model(\"SuModelPkg::TestModel\")'";
+"perl -Ilib -I../lib -MSu::Model=base,./t/test18/ -e 'Su::Model::generate_model(\"SuModelPkg::TestModel\")'";
   $cmd = convert_sep($cmd);
   `$cmd`;
   ok( -f "./t/test18/SuModelPkg/TestModel.pm" );
@@ -68,7 +68,7 @@ SKIP: {
     unlink "./t/test18/Defs/Defs.pm" or die $!;
   }
 
-  $cmd = "perl -MSu=base,./t/test18/ -e 'Su::gen_defs()'";
+  $cmd = "perl -Ilib -I../lib -MSu=base,./t/test18/ -e 'Su::gen_defs()'";
   $cmd = convert_sep($cmd);
   `$cmd`;
   ok( -f "./t/test18/Defs/Defs.pm" );
@@ -77,7 +77,8 @@ SKIP: {
     unlink "./t/test18/MyDefs/MyDefs.pm" or die $!;
   }
 
-  $cmd = "perl -MSu=base,./t/test18/ -e 'Su::gen_defs(\"MyDefs::MyDefs\")'";
+  $cmd =
+"perl -Ilib -I../lib -MSu=base,./t/test18/ -e 'Su::gen_defs(\"MyDefs::MyDefs\")'";
   $cmd = convert_sep($cmd);
   `$cmd`;
   ok( -f "./t/test18/MyDefs/MyDefs.pm" );
@@ -108,7 +109,7 @@ SKIP: {
 
   # Set base form Su package.
   $cmd =
-    "perl -MSu=base,./t/test18/ -e 'Su::gen_proc(\"Pkg::TestProcFromSu\")'";
+"perl -Ilib -I../lib -MSu=base,./t/test18/ -e 'Su::gen_proc(\"Pkg::TestProcFromSu\")'";
   $cmd = convert_sep($cmd);
   `$cmd`;
   ok( -f "./t/test18/Pkg/TestProcFromSu.pm" );
@@ -119,7 +120,7 @@ SKIP: {
 
   # Set base form Su package.
   $cmd =
-    "perl -MSu=base,./t/test18/ -e 'Su::gen_model(\"Pkg::TestModelFromSu\")'";
+"perl -Ilib -I../lib -MSu=base,./t/test18/ -e 'Su::gen_model(\"Pkg::TestModelFromSu\")'";
   $cmd = convert_sep($cmd);
   `$cmd`;
   ok( -f "./t/test18/Pkg/TestModelFromSu.pm" );

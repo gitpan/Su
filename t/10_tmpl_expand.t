@@ -1,6 +1,6 @@
-use Test::More tests => 25;
+use Test::More tests => 29;
 
-use lib qw( ../lib);
+use lib qw(lib ../lib);
 use Su::Template;
 
 #$Su::Template::DEBUG=1;
@@ -189,3 +189,14 @@ __HERE__
 
 is( $ret, "&gt;aaa&amp;bbb&lt;" );
 
+$ret = $t->expand('<%= 0 %>');
+is( $ret, "0" );
+
+$ret = $t->expand('<%= "" %>');
+is( $ret, "" );
+
+$ret = $t->expand('<%== 0 %>');
+is( $ret, "0" );
+
+$ret = $t->expand('<%== "" %>');
+is( $ret, "" );

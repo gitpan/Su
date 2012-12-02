@@ -14,7 +14,9 @@ use Su::Log;
 
 our @ISA = qw(Exporter);
 
-our @EXPORT = qw(expand render);
+# render requires explicit use declaration.
+our @EXPORT    = qw(expand);
+our @EXPORT_OK = qw(render);
 
 our $DEBUG = 0;
 
@@ -166,6 +168,7 @@ sub expand {
   my $b_perl_mode        = 0;
   my $b_no_last_newline  = 0;
   my $b_need_escape_hash = 0;
+  my $b_need_tmp_val     = 0;
 
 # add dumy \n prepare for after pop. And set flag not to add \n the end of the line.
   if ( substr( $org, ( length $org ) - 1 ) ne "\n" ) {
@@ -226,6 +229,7 @@ sub expand {
         {      # print variable itself
           my $exp = $3;
 
+          $b_need_tmp_val = 1;
           if ( $2 eq '=' ) {
             $b_need_escape_hash = 1;
           }
@@ -236,9 +240,8 @@ sub expand {
 
 #        push @ret, ('push(@f_t_a, (' . $exp . '));'); # NOTE: other variables may be double quote not single quote like this like.
 
+          # Escape and push.
           if ( $2 eq '=' ) {
-
-            # Escape and push.
             push @ret, '$tmp_val = ' . '(' . $exp . ');';
 
 # If the special charactor is already escaped using '&', then prevent unexpected double escaped.
@@ -248,11 +251,16 @@ sub expand {
 
             # $tmp_val=~s/(<|>|\'|"|&)/$escape_h{$1}/go;';
             push @ret, ( 'push(@f_t_a, $tmp_val' . ');}' );
+            push @ret, ('elsif(defined $tmp_val){push(@f_t_a, $tmp_val);}');
           } else {
 
             # Push only. Not escape.
-            push @ret, ( 'push(@f_t_a, (' . $exp . ')||"");' );
-          }
+            push @ret, '$tmp_val = ' . '(' . $exp . ');';
+            push @ret, 'if($tmp_val){';
+            push @ret, ( 'push(@f_t_a, $tmp_val' . ');}' );
+            push @ret, ('elsif(defined $tmp_val){push(@f_t_a, $tmp_val);}');
+
+          } ## end else [ if ( $2 eq '=' ) ]
 
         } else {
           push @ret, $3;
@@ -306,8 +314,11 @@ sub expand {
     #    push @ret, "\n";
   }    #while line
 
-  unshift( @ret, 'my $tmp_val="";' . "\n" . $escape_hash_str . "\n" )
+  unshift( @ret, 'my $tmp_val="";' . "\n" )
+    if $b_need_tmp_val;
+  unshift( @ret, $escape_hash_str . "\n" )
     if $b_need_escape_hash;
+
   unshift( @ret, 'sub make_template{' . "\n" . 'my @f_t_a=();' . "\n" );
   push( @ret, 'return join(\'\',@f_t_a);' . "\n" . '}' );
   my $prepare_data = join( '', @ret );

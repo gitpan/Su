@@ -1,5 +1,5 @@
 use Test::More tests => 9;
-use lib qw(../t/test16 t/test16 lib);
+use lib qw(../t/test16 t/test16 lib ../lib);
 use Su;
 use Su::Model;
 

@@ -1,6 +1,6 @@
 use Test::More tests => 1;
 
-use lib qw(t/test08 ../lib);
+use lib qw(lib t/test08 ../lib);
 use File::Path;
 use Cwd;
 use Su::Process base => './t', dir => 'test08';

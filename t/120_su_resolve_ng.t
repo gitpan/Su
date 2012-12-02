@@ -1,4 +1,4 @@
-
+use lib qw(lib ../lib);
 use Test::More tests => 3;
 use Su;
 

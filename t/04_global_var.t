@@ -1,6 +1,6 @@
 
 use Test::More tests => 4;
-use lib "../lib";
+use lib qw(lib ../lib);
 
 {
   require_ok('Su::Template');

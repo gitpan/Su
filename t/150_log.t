@@ -1,7 +1,7 @@
-use Su::Log;
+use lib qw(lib ../lib t/test15 test15);
 
+use Su::Log;
 use Test::More tests => 38;
-use lib qw(t/test15 test15);
 use Procs::ForLogTest;
 use Procs::ForLogTest2;
 

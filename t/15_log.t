@@ -50,6 +50,7 @@ sub fn02 {
 }
 
 sub hndl {
+  shift;    # Remove the caller parameter.
   $log_msg = join '', 'custom log handler:', @_;
 
   #  diag($log_msg);

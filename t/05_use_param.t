@@ -1,5 +1,5 @@
 use Test::More tests => 11;
-use lib "../lib";
+use lib qw(lib ../lib);
 use File::Path;
 use Fatal qw(rmtree);
 use Su::Process base => './somedir';

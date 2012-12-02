@@ -1,6 +1,6 @@
 use Test::More;
 
-use lib "../lib";
+use lib qw(lib ../lib);
 
 use Su::Process;
 

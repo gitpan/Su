@@ -15,7 +15,7 @@ use Su::Log;
 
 use Fatal qw(mkpath open);
 
-our $VERSION = '0.100';
+our $VERSION = '0.110';
 
 our @ISA = qw(Exporter);
 
@@ -35,6 +35,9 @@ our $DEFAULT_PROC_NAME = 'MainProc';
 
 # A relative path to place the .tmpl file.
 our $SU_TMPL_DIR = '/Su/templates/';
+
+# The field name to define the global fields in Defs file.
+our $GLOBAL_MODEL_FIELD = 'global_model_field';
 
 =head1 NAME
 
@@ -196,7 +199,7 @@ The C<scalar_filter> method must return the scalar data type.
 
 Set the locale string like 'ja_JP' to load locale specific Model
 module. Locale specific Model has the postfix in it's name like
-'Pkf::ModelName__ja_JP'.
+'Pkg::ModelName__ja_JP'.
 
 Then you should set the locale like this.
 
@@ -614,72 +617,17 @@ sub resolve {
   my $comp_id = shift;
   my @ctx     = @_;
 
-  my $info_href;
-
-  # If the flag $USE_GLOBAL_SETUP is set, use the setting set by the
-  # method Su::setup.
-  if ($USE_GLOBAL_SETUP) {
-    $info_href = $Su::info_href;
-  } elsif ( $self
-    && UNIVERSAL::isa( $self, 'UNIVERSAL' )
-    && $self->isa('Su') )
-  {
-
-    # If hash is passed, just use passed info, and not load defs file.
-    $self->_load_defs_file( $self->{defs_module} )
-      unless ref $comp_id eq 'HASH';
-  } else {
-
-    # called as global method like 'Su::resolve("id")'.
-    unless ( ref $comp_id eq 'HASH' ) {
-
-      # If Su::setup is called, then use global setting, else load setting
-      # from defs file.
-      $info_href =
-        keys %{$Su::info_href} ? $Su::info_href : _load_defs_file();
-
-      # _load_defs_file();
-      Su::Log->trace( 'comp_id:' . $comp_id );
-      Su::Log->trace( 'new set:' . Dumper($info_href) );
-    } ## end unless ( ref $comp_id eq 'HASH')
-
-    # _load_defs_file();
-  } ## end else [ if ($USE_GLOBAL_SETUP)]
+  my ( $info_href, $new_comp_id ) =
+    ( $self && eval { $self->isa('Su') } )
+    ? $self->_get_info($comp_id)
+    : _get_info($comp_id);
+  $comp_id = $new_comp_id if $new_comp_id;
 
 # If Su->{base} is specified, this effects to Template and Model, else used own value Template and Model has.
   my $BASE_DIR = $self->{base};
   my $MODEL_DIR = $self->{model} ? $self->{model} : $Su::Model::MODEL_DIR;
   my $TEMPLATE_DIR =
     $self->{template} ? $self->{template} : $Su::Template::TEMPLATE_DIR;
-
-  #  $info_href = $self->{defs_href} ? $self->{defs_href} : $Su::info_href;
-
-  # If defs info is passed as paramter, then use it.
-  if ( ref $comp_id eq 'HASH' ) {
-    $info_href = { 'dmy_id' => $comp_id };
-
-    # Set dummy id to use passed parameter.
-    $comp_id = 'dmy_id';
-  } elsif ( !$info_href ) {
-
-    # $self->{defs_href} and $Su::info_href is set by _load_defs_file().
-    $info_href = $self->{defs_href} ? $self->{defs_href} : $Su::info_href;
-  }
-
-  #  if(is_hash_empty($info_href->{$comp_id})){
-  if (
-    !$info_href->{$comp_id}
-    || !(
-      ref $info_href->{$comp_id} eq 'HASH' && keys %{ $info_href->{$comp_id} }
-    )
-    )
-  {
-
-    croak "Entry id '$comp_id' is  not found in Defs file:"
-      . Dumper($info_href);
-
-    #return undef;
-  } ## end if ( !$info_href->{$comp_id...})
 
   my $proc = Su::Process->new( base => $BASE_DIR, dir => $TEMPLATE_DIR );
   my $proc_id = $info_href->{$comp_id}->{proc};
@@ -708,20 +656,6 @@ sub resolve {
       $tmpl_module->model( $info_href->{$comp_id}->{model} );
     } elsif ( ref $info_href->{$comp_id}->{model} eq 'ARRAY' ) {
 
-      # Call module method with each of models.
-      my $mdl = Su::Model->new( base => $BASE_DIR, dir => $MODEL_DIR );
-
-      for my $loaded_model ( @{ $info_href->{$comp_id}->{model} } ) {
-
-        #diag("model:" . $info_href->{$comp_id}->{model});
-        #diag("loaded:" . $mdl->load_model($info_href->{$comp_id}->{model}));
-        chomp $loaded_model;
-        if ($loaded_model) {
-          $tmpl_module->model( $mdl->load_model($loaded_model) );
-          push @ret_arr, $tmpl_module->process(@ctx);
-        }
-      } ## end for my $loaded_model ( ...)
-
     } else {
 
       # this should be model class name.
@@ -737,8 +671,12 @@ sub resolve {
       # If locale specific model is not exist, then load default model file.
       Su::Log->trace( 'loading model:' . $loading_model );
       if ($loading_model) {
-        my $model = $mdl->load_model( $loading_model, 'suppress_error' );
+        my $model = $mdl->load_model( $loading_model, { suppress_error => 1 } );
         $model = $mdl->load_model($base_loading_model) unless $model;
+
+        # Load global field from Defs file.
+        %{$model} = ( %{$model}, %{ $info_href->{$GLOBAL_MODEL_FIELD} } )
+          if defined $info_href->{$GLOBAL_MODEL_FIELD};
 
         # Get the prefix or postfix setting for loading model.
         my $MODEL_KEY_PREFIX  = $MODEL_KEY_PREFIX->{$loading_model}  || '';
@@ -772,6 +710,31 @@ sub resolve {
 
       } ## end if ($loading_model)
     } ## end else [ if ( ref $info_href->{...})]
+  } ## end if ( $tmpl_module->can...)
+
+  # Just return proc instance.
+  if ( $self->{just_return_module} ) {
+    return $tmpl_module;
+  }
+
+  if ( $tmpl_module->can('model') ) {
+    if ( ref $info_href->{$comp_id}->{model} eq 'ARRAY' ) {
+
+      # Call module method with each of models.
+      my $mdl = Su::Model->new( base => $BASE_DIR, dir => $MODEL_DIR );
+
+      for my $loaded_model ( @{ $info_href->{$comp_id}->{model} } ) {
+
+        #diag("model:" . $info_href->{$comp_id}->{model});
+        #diag("loaded:" . $mdl->load_model($info_href->{$comp_id}->{model}));
+        chomp $loaded_model;
+        if ($loaded_model) {
+          $tmpl_module->model( $mdl->load_model($loaded_model) );
+          push @ret_arr, $tmpl_module->process(@ctx);
+        }
+      } ## end for my $loaded_model ( ...)
+
+    } ## end if ( ref $info_href->{...})
   } ## end if ( $tmpl_module->can...)
 
   my @filters = ();
@@ -861,6 +824,165 @@ sub resolve {
 
 } ## end sub resolve
 
+=begin comment
+
+Read Process and Model infomation from Defs file.
+
+=end comment
+
+=cut
+
+sub _get_info {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $comp_id = shift;
+  my $info_href;
+
+  # If the flag $USE_GLOBAL_SETUP is set, use the setting set by the
+  # method Su::setup.
+  if ($USE_GLOBAL_SETUP) {
+    $info_href = $Su::info_href;
+  } elsif ( $self
+    && UNIVERSAL::isa( $self, 'UNIVERSAL' )
+    && $self->isa('Su') )
+  {
+
+    # If hash is passed, just use passed info, and not load defs file.
+    $self->_load_defs_file( $self->{defs_module} )
+      unless ref $comp_id eq 'HASH';
+  } else {
+
+    # called as global method like 'Su::resolve("id")'.
+    unless ( ref $comp_id eq 'HASH' ) {
+
+      # If Su::setup is called, then use global setting, else load setting
+      # from defs file.
+      $info_href =
+        keys %{$Su::info_href} ? $Su::info_href : _load_defs_file();
+
+      # _load_defs_file();
+      Su::Log->trace( 'comp_id:' . $comp_id );
+      Su::Log->trace( 'new set:' . Dumper($info_href) );
+    } ## end unless ( ref $comp_id eq 'HASH')
+
+    # _load_defs_file();
+  } ## end else [ if ($USE_GLOBAL_SETUP)]
+
+  # If defs info is passed as paramter, then use it.
+  if ( ref $comp_id eq 'HASH' ) {
+    $info_href = { 'dmy_id' => $comp_id };
+
+    # Set dummy id to use passed parameter.
+    $comp_id = 'dmy_id';
+  } elsif ( !$info_href ) {
+
+    # $self->{defs_href} and $Su::info_href is set by _load_defs_file().
+    $info_href = $self->{defs_href} ? $self->{defs_href} : $Su::info_href;
+  }
+
+  if (
+    !$info_href->{$comp_id}
+    || !(
+      ref $info_href->{$comp_id} eq 'HASH' && keys %{ $info_href->{$comp_id} }
+    )
+    )
+  {
+    croak "Entry id '$comp_id' is  not found in Defs file:"
+      . Dumper($info_href);
+  } ## end if ( !$info_href->{$comp_id...})
+
+  return ( $info_href, $comp_id eq 'dmy_id' ? $comp_id : 0 );
+
+} ## end sub _get_info
+
+=item get_proc()
+
+This function is just a synonym of the method L<get_instance>.
+
+=cut
+
+sub get_proc {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $ret;
+  if ($self) {
+    $ret = $self->get_instance(@_);
+  } else {
+    $ret = get_instance(@_);
+  }
+  return $ret;
+} ## end sub get_proc
+
+=item
+
+Just return the instance of the Process which defined in Defs
+file. Model data is set to that returned Process.
+
+  my $proc = $su->get_instance('main_proc');
+
+=cut
+
+sub get_instance {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $comp_id = shift;
+
+  # just_return_module is a flag not to execute process and just return
+  # the instance of the process itself.
+  $self->{just_return_module} = 1;
+  my $proc = $self->resolve($comp_id);
+  $self->{just_return_module} = undef;
+  return $proc;
+} ## end sub get_instance
+
+=item get_inst()
+
+This function is just a synonym of the method L<get_instance>.
+
+=cut
+
+sub get_inst {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $ret;
+  if ($self) {
+    $ret = $self->get_instance(@_);
+  } else {
+    $ret = get_instance(@_);
+  }
+  return $ret;
+} ## end sub get_inst
+
+=item retr()
+
+This function is just a synonym of the method L<get_instance>.
+
+=cut
+
+sub retr {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $ret;
+  if ($self) {
+    $ret = $self->get_instance(@_);
+  } else {
+    $ret = get_instance(@_);
+  }
+  return $ret;
+} ## end sub retr
+
+=item inst()
+
+This function is just a synonym of the method L<get_instance>.
+
+=cut
+
+sub inst {
+  my $self = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $ret;
+  if ($self) {
+    $ret = $self->get_instance(@_);
+  } else {
+    $ret = get_instance(@_);
+  }
+  return $ret;
+} ## end sub inst
+
 =item init()
 
 Generate the initial files at once. The initial files are composed of
@@ -877,6 +999,8 @@ This method can be called from command line like the following:
 sub init {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ );
   my $pkg = shift;
+
+  die "The parameter package name is requqired." unless $pkg;
 
 # Note that the package of defs file is fixed and don't reflect the passed package name.
   no warnings qw(once);

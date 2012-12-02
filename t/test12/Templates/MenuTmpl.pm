@@ -14,8 +14,8 @@ sub process {
   my $ret = expand( <<'__TMPL__', $model );
 % my $href = shift;
 field and values.
-% while  ( my ($key, $value) = each(%{$href}) ) {
-  <%= $key%>:<%= $value->{type}%>
+% for   my $key (sort keys %{$href}) {
+  <%= $key%>:<%= $href->{$key}->{type}%>
 % }
 
 __TMPL__

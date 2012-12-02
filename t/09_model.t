@@ -1,6 +1,6 @@
-use Test::More tests => 23;
+use Test::More tests => 28;
 
-use lib qw(t t/test09 . ../lib);
+use lib qw(lib t t/test09 . ../lib);
 use File::Path;
 use Cwd;
 use Su::Model;
@@ -143,4 +143,32 @@ is_deeply( Su::Model->attr('key3'),
 Su::Model->attr->{key4} = 'value4';
 
 is( Su::Model->attr->{key4}, 'value4' );
+
+# Test for suppress error.
+my $ret = 0;
+eval { $model_href = $mdl->load_model('dmy data'); };
+if ($@) {
+  $ret = 1;
+}
+ok($ret);
+
+$model_href = $mdl->load_model( 'dmy data', { suppress_error => 1 } );
+
+ok( !defined $model_href );
+
+# Test for not accept destructive operation.
+
+ok( Su::Model::load_model('Nest::Mdl4')->{field2} eq 'value3' );
+
+Su::Model::load_model('Nest::Mdl4')->{field2} = 'new value';
+
+ok( Su::Model::load_model('Nest::Mdl4')->{field2} eq 'value3',
+  'The value changed.' );
+
+# Test for destructive operation.
+
+Su::Model::load_model( 'Nest::Mdl4', { share => 1 } )->{field2} = 'new value';
+
+is( Su::Model::load_model( 'Nest::Mdl4', { share => 1 } )->{field2},
+  'new value', 'The value not changed.' );
 

@@ -101,3 +101,13 @@ lib/Su/Build/CustomBuild.pm
 
 
 lib/Su/templates/DefsPm.tmpl
+META.json
+
+t/124_global_resolve.t
+t/125_get_instance.t
+t/test124/Defs/Defs.pm
+t/test124/pkg/MainProc.pm
+t/test124/pkg/Model.pm
+t/test125/Defs/Defs.pm
+t/test125/pkg/Main.pm
+t/test125/pkg/MainModel.pm

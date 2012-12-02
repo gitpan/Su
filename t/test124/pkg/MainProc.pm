@@ -5,18 +5,19 @@ use Su::Template;
 
 my $model = {};
 
-# sub new {
-#   return bless { model => $model }, shift;
-# }
+sub new {
+  return bless { model => $model }, shift;
+}
 
 # The main method for this process class.
 sub process {
-  my $self             = shift if ref $_[0] eq __PACKAGE__;
-  my $self_module_name = shift if $_[0]     eq __PACKAGE__;
+  my $self             = shift if ( $_[0] && ref $_[0] eq __PACKAGE__ );
+  my $self_module_name = shift if ( $_[0] && $_[0]     eq __PACKAGE__ );
   my $model = keys %{ $self->{model} } ? $self->{model} : $model;
 
-  my $param = shift;
-  return $model->{$param};
+  my $ret = "value1";
+
+  return $ret;
 } ## end sub process
 
 # This method is called if specified as a map filter class.

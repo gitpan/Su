@@ -1,6 +1,6 @@
 
 use Test::More tests => 2;
-use lib "../lib";
+use lib qw(lib ../lib);
 
 use Su::Process dir => './somedir';
 

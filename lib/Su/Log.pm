@@ -486,15 +486,17 @@ sub is_large_level {
 } ## end sub is_large_level
 
 sub _log_method_impl {
-  my $self         = shift if ( ref $_[0] eq __PACKAGE__ );
-  my $method_level = shift;
-  my $log_handler  = $self->{log_handler} ? $self->{log_handler} : $log_handler;
-  my $target_info  = is_target( _is_empty($self) ? caller() : $self );
+  my $self          = shift if ( ref $_[0] eq __PACKAGE__ );
+  my $opt_href      = shift;
+  my $caller_prefix = $opt_href->{caller};
+  my $method_level  = $opt_href->{level};
+  my $log_handler = $self->{log_handler} ? $self->{log_handler} : $log_handler;
+  my $target_info = is_target( _is_empty($self) ? caller() : $self );
 
   if ( $target_info->{is_target}
     && $self->is_large_level( $method_level, $target_info->{level} ) )
   {
-    return $log_handler->( uc("[$method_level]"), @_ );
+    return $log_handler->( "[$caller_prefix]", uc("[$method_level]"), @_ );
   }
 } ## end sub _log_method_impl
 
@@ -507,8 +509,11 @@ Log the passed message as trace level.
 sub trace {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
 
-  $self->_log_method_impl( "trace", @_ );
-}
+  my ( $pkg, $file, $line ) = caller;
+
+  my $caller_prefix = $file . ':L' . $line;
+  $self->_log_method_impl( { caller => $caller_prefix, level => "trace" }, @_ );
+} ## end sub trace
 
 =item info()
 
@@ -518,8 +523,12 @@ Log the passed message as info level.
 
 sub info {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
-  $self->_log_method_impl( "info", @_ );
-}
+
+  my ( $pkg, $file, $line ) = caller;
+
+  my $caller_prefix = $file . ':L' . $line;
+  $self->_log_method_impl( { caller => $caller_prefix, level => "info" }, @_ );
+} ## end sub info
 
 =item warn()
 
@@ -529,8 +538,10 @@ Log the passed message as warn level.
 
 sub warn {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
-  $self->_log_method_impl( "warn", @_ );
-}
+  my ( $pkg, $file, $line ) = caller;
+  my $caller_prefix = $file . ':L' . $line;
+  $self->_log_method_impl( { caller => $caller_prefix, level => "warn" }, @_ );
+} ## end sub warn
 
 =item error()
 
@@ -540,8 +551,10 @@ Log the passed message as error level.
 
 sub error {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
-  $self->_log_method_impl( "error", @_ );
-}
+  my ( $pkg, $file, $line ) = caller;
+  my $caller_prefix = $file . ':L' . $line;
+  $self->_log_method_impl( { caller => $caller_prefix, level => "error" }, @_ );
+} ## end sub error
 
 =item crit()
 
@@ -551,8 +564,10 @@ Log the passed message as crit level.
 
 sub crit {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
-  $self->_log_method_impl( "crit", @_ );
-}
+  my ( $pkg, $file, $line ) = caller;
+  my $caller_prefix = $file . ':L' . $line;
+  $self->_log_method_impl( { caller => $caller_prefix, level => "crit" }, @_ );
+} ## end sub crit
 
 =item debug()
 
@@ -562,8 +577,11 @@ Log the passed message as debug level.
 
 sub debug {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ || $_[0] eq __PACKAGE__ );
-  $self->_log_method_impl( "debug", @_ );
-}
+  my ( $pkg, $file, $line ) = caller;
+  my $caller_prefix = $file . ':L' . $line;
+  $self->_log_method_impl( { caller => $caller_prefix, level => "debug" }, @_ );
+
+} ## end sub debug
 
 =item log()
 
@@ -582,8 +600,10 @@ sub log {
   if ( is_target( _is_empty($self) ? caller() : $self )
     && ( grep /^$tag$/, @target_tag ) )
   {
-    return $log_handler->( "[" . $tag . "]", @_ );
-  }
+    my ( $pkg, $file, $line ) = caller;
+    my $caller_prefix = $file . ':L' . $line;
+    return $log_handler->( "[$caller_prefix]", "[$tag]", @_ );
+  } ## end if ( is_target( _is_empty...))
 
 } ## end sub log
 
@@ -683,7 +703,8 @@ sub _is_empty {
 
 =begin comment
 
-Add the prefix of time and the information of called place to the passed parameter and return it as a string.
+Add the prefix of time to the passed parameter and return it as a string.
+The caller information is passed to this method as a parameter.
 
 =end comment
 
@@ -694,11 +715,8 @@ sub _make_log_string {
   my $date_prefix = sprintf "%04d/%02d/%02d %02d:%02d:%02d", $y + 1900, $m + 1,
     $d,
     $h, $mi, $s;
-  my ( $pkg, $file, $line ) = caller;
 
-  '[' . $date_prefix . '][' . $file . ':L'
-## . $pkg . ':L'
-    . $line . ']' . join( '', @_, "\n" );
+  return '[' . $date_prefix . ']' . join( '', @_, "\n" );
 } ## end sub _make_log_string
 
 =pod

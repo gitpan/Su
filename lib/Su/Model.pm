@@ -7,6 +7,7 @@ use File::Path;
 use Data::Dumper;
 use Test::More;
 use Carp;
+use Storable qw(dclone);
 
 use Su::Template;
 use Su::Log;
@@ -29,7 +30,7 @@ Su::Model - A module to treat user data.
 
 =head1 SYNOPSYS
 
-  Su::Model::load_model('Pkg::SomeModel')->{field_A} = $value;
+  Su::Model::load_model('Pkg::SomeModel', {share => 1} )->{field_A} = $value;
 
   my $value  = Su::Model::load_model('Pkg::SomeModel')->{field_A};
 
@@ -265,24 +266,30 @@ model, then the sample code becomes as follwings:
   my $value  = Su::Model::load_model('Pkg::SomeModel')->{value};
 
 If you want to suppress dying because of module require error, then pass
-the second parameter truesy like the following.
+the second parameter like the following.
 
-  my $model = $mdl->load_model( 'Pkg::SomeModel', 1 );
+  my $model = $mdl->load_model( 'Pkg::SomeModel', {suppress_error => 1} );
 
 When the second parameter is passed and load error occured, then this
 method return undef.
+
+If you want to share and reuse model data, then pass the share parameter as
+the second parameter.
+
+  my $model = $mdl->load_model( 'Pkg::SomeModel', {share => 1} );
 
 =cut
 
 sub load_model {
   my $self = shift if ( ref $_[0] eq __PACKAGE__ );
 
-  my $model_id                        = shift;
-  my $b_suppress_die_and_return_undef = shift;
+  my $model_id         = shift;
+  my $opt_href         = shift;
   my $MODEL_CACHE_HREF = $self ? $self->{models} : $MODEL_CACHE_HREF;
 
-  # Return if cache exists.
-  return $MODEL_CACHE_HREF->{$model_id} if ( $MODEL_CACHE_HREF->{$model_id} );
+  # Return the cacned data if cache exists.
+  return $MODEL_CACHE_HREF->{$model_id}
+    if ( $MODEL_CACHE_HREF->{$model_id} ) && $opt_href->{share};
 
   # NOTE: No need this safe guard.
   #  $self = {} unless $self;
@@ -300,7 +307,7 @@ sub load_model {
 
   eval { require($model_path); };
   if ($@) {
-    if ($b_suppress_die_and_return_undef) {
+    if ( $opt_href->{suppress_error} ) {
       return undef;
     } else {
       die $@;
@@ -319,8 +326,16 @@ sub load_model {
 
   die "Model has no model field:" . $model_path unless $model_href;
 
+  # Cache the model data.
   $self->{models}->{$model_id} = $model_href;
-  return $model_href;
+
+  if ( $opt_href->{share} ) {
+    return $model_href;
+  } else {
+
+# To prevent destructive effect to this model data, we need to replicate the instance.
+    return dclone($model_href);
+  }
 } ## end sub load_model
 
 =begin comment

@@ -1,5 +1,5 @@
 use Test::More tests => 6;
-use lib qw(t/test121);
+use lib qw(lib ../lib t/test121);
 use Su base => './t/test121';
 
 my $su = Su->new;

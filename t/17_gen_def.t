@@ -1,4 +1,4 @@
-use lib qw(t/test17 lib);
+use lib qw(t/test17 lib ../lib);
 use Su;
 use Test::More tests => 3;
 
